@@ -28,7 +28,7 @@ class BWS_Settings {
 			'restrict_theme_install'                 => 1,
 			'restrict_theme_switch'                  => 1,
 			'menu_hide_tools'                        => 1,
-			'menu_hide_comments'                     => 1, // changed default to checked
+			'menu_hide_comments'                     => 1,
 			'menu_hide_settings'                     => 0,
 			'menu_hide_users'                        => 0,
 			'menu_hide_plugins'                      => 0,
@@ -67,7 +67,7 @@ class BWS_Settings {
 			'login_help_text'                        => 'Website managed by Best Website • support@bestwebsite.com',
 
 			'plugin_whitelabel_enabled'              => 1,
-			'plugin_hide_settings_menu'              => 0, // unchecked by default = visible in menu
+			'plugin_hide_settings_menu'              => 0,
 			'plugin_hide_from_plugins_list'          => 0,
 			'plugin_hide_plugin_ui_badges'           => 0,
 			'plugin_hide_support_menu_from_adminbar' => 0,
@@ -87,8 +87,7 @@ class BWS_Settings {
 
 		return wp_parse_args( $saved, $this->get_defaults() );
 	}
-
-	public function get( $key, $default = null ) {
+public function get( $key, $default = null ) {
 		$all = $this->get_all();
 		return array_key_exists( $key, $all ) ? $all[ $key ] : $default;
 	}
@@ -201,7 +200,6 @@ class BWS_Settings {
 			return;
 		}
 
-		// New behavior: unchecked = visible in Settings menu, checked = direct URL only.
 		$parent_slug = $this->get( 'plugin_hide_settings_menu', 0 ) ? null : 'options-general.php';
 
 		add_submenu_page(
@@ -347,7 +345,7 @@ class BWS_Settings {
 				<h2><?php esc_html_e( 'Plugin Visibility / White-Label', BWS_TEXT_DOMAIN ); ?></h2>
 				<p><?php $this->checkbox( 'plugin_whitelabel_enabled', 'Enable white-label behavior' ); ?></p>
 				<p><?php $this->checkbox( 'plugin_hide_settings_menu', 'Hide settings page in admin menu (direct URL only)' ); ?></p>
-				<p><?php $this->checkbox( 'plugin_hide_from_plugins_list', 'Hide this plugin from Plugins list (advanced)' ); ?></p>
+				<p><?php $this->checkbox( 'plugin_hide_from_plugins_list', 'Hide this plugin from Plugins list (advanced; test carefully)' ); ?></p>
 				<p><?php $this->checkbox( 'plugin_hide_plugin_ui_badges', 'Hide this plugin’s update row/badges when possible' ); ?></p>
 				<p><?php $this->checkbox( 'plugin_hide_support_menu_from_adminbar', 'Hide support page from admin bar shortcuts (future-safe)' ); ?></p>
 
