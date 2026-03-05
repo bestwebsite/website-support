@@ -200,7 +200,7 @@ class BWS_Settings {
 		add_submenu_page(
 			$parent_slug,
 			__( 'Best Website Support Settings', BWS_TEXT_DOMAIN ),
-			__( 'Best Website Support', BWS_TEXT_DOMAIN ),
+			__( 'Website Support', BWS_TEXT_DOMAIN ),
 			'manage_options',
 			BWS_SETTINGS_PAGE_SLUG,
 			[ $this, 'render_settings_page' ]
@@ -340,7 +340,7 @@ class BWS_Settings {
 				<h2><?php esc_html_e( 'Plugin Visibility / White-Label', BWS_TEXT_DOMAIN ); ?></h2>
 				<p><?php $this->checkbox( 'plugin_whitelabel_enabled', 'Enable white-label behavior' ); ?></p>
 				<p><?php $this->checkbox( 'plugin_show_settings_menu', 'Show settings page in admin menu (otherwise direct URL only)' ); ?></p>
-				<p><?php $this->checkbox( 'plugin_hide_from_plugins_list', 'Hide this plugin from Plugins list (advanced; test carefully)' ); ?></p>
+				<p><?php $this->checkbox( 'plugin_hide_from_plugins_list', 'Hide this plugin from Plugins list (advanced)' ); ?></p>
 				<p><?php $this->checkbox( 'plugin_hide_plugin_ui_badges', 'Hide this plugin’s update row/badges when possible' ); ?></p>
 				<p><?php $this->checkbox( 'plugin_hide_support_menu_from_adminbar', 'Hide support page from admin bar shortcuts (future-safe)' ); ?></p>
 
