@@ -200,7 +200,7 @@ class BWS_Settings {
 		add_submenu_page(
 			$parent_slug,
 			__( 'Best Website Support Settings', BWS_TEXT_DOMAIN ),
-			__( 'Best Website Support', BWS_TEXT_DOMAIN ),
+			__( 'Website Support', BWS_TEXT_DOMAIN ),
 			'manage_options',
 			BWS_SETTINGS_PAGE_SLUG,
 			[ $this, 'render_settings_page' ]
