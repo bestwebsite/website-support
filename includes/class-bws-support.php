@@ -11,6 +11,40 @@ class BWS_Support {
 		add_action( 'admin_menu', [ $this, 'register_support_page' ], 50 );
 		add_action( 'wp_dashboard_setup', [ $this, 'register_dashboard_widget' ], 20 );
 		add_action( 'admin_post_bws_submit_support_request', [ $this, 'handle_support_submission' ] );
+		add_action( 'admin_head', [ $this, 'admin_support_styles' ] );
+	}
+
+
+	public function admin_support_styles() {
+		if ( ! is_admin() ) {
+			return;
+		}
+		$screen = function_exists( 'get_current_screen' ) ? get_current_screen() : null;
+		$screen_id = $screen && isset( $screen->id ) ? (string) $screen->id : '';
+		$is_support_screen = in_array( $screen_id, [ 'dashboard', 'toplevel_page_' . BWS_SUPPORT_PAGE_SLUG ], true );
+		if ( ! $is_support_screen ) {
+			return;
+		}
+		echo '<style>
+		#bws_website_support_widget .inside{padding:0;margin:0;background:#fff}
+		.bws-support-shell{border:1px solid #dcdcde;border-radius:10px;background:#fff;overflow:hidden;box-shadow:0 1px 2px rgba(0,0,0,.04)}
+		.bws-support-header{padding:14px 16px;background:linear-gradient(180deg,#ffffff,#f6f7f7);border-bottom:1px solid #dcdcde}
+		.bws-support-brand{display:flex;gap:12px;align-items:center}
+		.bws-support-brand img{max-height:42px;width:auto;display:block}
+		.bws-support-kicker{margin:0;font-size:12px;color:#646970;text-transform:uppercase;letter-spacing:.04em}
+		.bws-support-title{margin:2px 0 0;font-size:14px;font-weight:600;color:#1d2327}
+		.bws-support-email{margin:6px 0 0;font-size:13px;color:#50575e}
+		.bws-support-email a{text-decoration:none}
+		.bws-support-body{padding:16px}
+		.bws-support-help{margin:0 0 14px;color:#50575e;line-height:1.45}
+		.bws-support-grid{display:grid;grid-template-columns:110px minmax(0,1fr);gap:10px 12px;align-items:start}
+		.bws-support-grid label{font-weight:600;color:#1d2327;padding-top:8px}
+		.bws-support-grid input[type=text],.bws-support-grid input[type=email],.bws-support-grid select,.bws-support-grid textarea{width:100%;max-width:100%}
+		.bws-support-grid textarea{min-height:110px}
+		.bws-support-actions{margin-top:12px;padding-top:10px;border-top:1px solid #f0f0f1}
+		#bws_website_support_widget .bws-support-grid{grid-template-columns:100px minmax(0,1fr)}
+		@media (max-width:782px){.bws-support-grid{grid-template-columns:1fr}.bws-support-grid label{padding-top:0}}
+		</style>';
 	}
 
 	public function register_support_page() {
@@ -61,13 +95,16 @@ class BWS_Support {
 		$intro    = (string) $this->settings->get( 'branding_support_widget_intro', 'Managed Website Support by Best Website' );
 		$email    = (string) $this->settings->get( 'support_email', 'support@bestwebsite.com' );
 
-		echo '<div style="margin-bottom:12px;padding:12px;border:1px solid #dcdcde;border-radius:8px;background:#fff;">';
+		echo '<div class="bws-support-shell">';
+		echo '<div class="bws-support-header"><div class="bws-support-brand">';
 		if ( $logo_url ) {
-			echo '<p style="margin:0 0 8px 0;"><img src="' . esc_url( $logo_url ) . '" alt="" style="max-height:44px;width:auto;"></p>';
+			echo '<img src="' . esc_url( $logo_url ) . '" alt="">';
 		}
-		echo '<p style="margin:0 0 6px 0;font-weight:600;">' . esc_html( $intro ) . '</p>';
-		echo '<p style="margin:0;color:#50575e;">' . esc_html__( 'Email:', BWS_TEXT_DOMAIN ) . ' <a href="mailto:' . esc_attr( $email ) . '">' . esc_html( $email ) . '</a></p>';
-		echo '</div>';
+		echo '<div class="bws-support-brandtext">';
+		echo '<p class="bws-support-kicker">' . esc_html__( 'Best Website Support', BWS_TEXT_DOMAIN ) . '</p>';
+		echo '<p class="bws-support-title">' . esc_html( $intro ) . '</p>';
+		echo '<p class="bws-support-email">' . esc_html__( 'Email:', BWS_TEXT_DOMAIN ) . ' <a href="mailto:' . esc_attr( $email ) . '">' . esc_html( $email ) . '</a></p>';
+		echo '</div></div></div>';
 	}
 
 	private function render_support_ui( $context = 'dashboard' ) {
@@ -82,31 +119,34 @@ class BWS_Support {
 		if ( 'page' === $context ) {
 			$page_intro = (string) $this->settings->get( 'branding_support_page_intro', '' );
 			if ( '' !== trim( $page_intro ) ) {
-				echo '<p>' . esc_html( $page_intro ) . '</p>';
+				echo '<p class="bws-support-help">' . esc_html( $page_intro ) . '</p>';
 			}
 		}
 
 		$instructions = (string) $this->settings->get( 'support_instructions_text', '' );
 		if ( '' !== trim( $instructions ) ) {
-			echo '<p>' . esc_html( $instructions ) . '</p>';
+			echo '<p class="bws-support-help">' . esc_html( $instructions ) . '</p>';
 		}
 
 		$current_user = wp_get_current_user();
+		echo '<div class="bws-support-body">';
 		echo '<form method="post" action="' . esc_url( admin_url( 'admin-post.php' ) ) . '">';
 		wp_nonce_field( 'bws_submit_support_request', 'bws_support_nonce' );
 		echo '<input type="hidden" name="action" value="bws_submit_support_request">';
-		echo '<table class="form-table" role="presentation"><tbody>';
-		echo '<tr><th scope="row"><label for="bws_support_topic">' . esc_html__( 'Topic', BWS_TEXT_DOMAIN ) . '</label></th><td><select id="bws_support_topic" name="bws_support_topic" required>';
+		echo '<div class="bws-support-grid">';
+		echo '<label for="bws_support_topic">' . esc_html__( 'Topic', BWS_TEXT_DOMAIN ) . '</label><div><select id="bws_support_topic" name="bws_support_topic" required>';
 		foreach ( $this->get_topics() as $topic ) {
 			echo '<option value="' . esc_attr( $topic ) . '">' . esc_html( $topic ) . '</option>';
 		}
-		echo '</select></td></tr>';
-		echo '<tr><th scope="row"><label for="bws_support_message">' . esc_html__( 'Message', BWS_TEXT_DOMAIN ) . '</label></th><td><textarea id="bws_support_message" name="bws_support_message" rows="6" class="large-text" required></textarea></td></tr>';
-		echo '<tr><th scope="row"><label for="bws_support_name">' . esc_html__( 'Your Name', BWS_TEXT_DOMAIN ) . '</label></th><td><input id="bws_support_name" type="text" name="bws_support_name" class="regular-text" value="' . esc_attr( $current_user->display_name ) . '"></td></tr>';
-		echo '<tr><th scope="row"><label for="bws_support_email">' . esc_html__( 'Your Email', BWS_TEXT_DOMAIN ) . '</label></th><td><input id="bws_support_email" type="email" name="bws_support_email" class="regular-text" value="' . esc_attr( $current_user->user_email ) . '"></td></tr>';
-		echo '</tbody></table>';
-		submit_button( __( 'Send Support Request', BWS_TEXT_DOMAIN ) );
-		echo '</form>';
+		echo '</select></div>';
+		echo '<label for="bws_support_message">' . esc_html__( 'Message', BWS_TEXT_DOMAIN ) . '</label><div><textarea id="bws_support_message" name="bws_support_message" rows="6" class="large-text" required></textarea></div>';
+		echo '<label for="bws_support_name">' . esc_html__( 'Your Name', BWS_TEXT_DOMAIN ) . '</label><div><input id="bws_support_name" type="text" name="bws_support_name" class="regular-text" value="' . esc_attr( $current_user->display_name ) . '"></div>';
+		echo '<label for="bws_support_email">' . esc_html__( 'Your Email', BWS_TEXT_DOMAIN ) . '</label><div><input id="bws_support_email" type="email" name="bws_support_email" class="regular-text" value="' . esc_attr( $current_user->user_email ) . '"></div>';
+		echo '</div>';
+		echo '<div class="bws-support-actions">';
+		submit_button( __( 'Send Support Request', BWS_TEXT_DOMAIN ), 'primary', 'submit', false );
+		echo '</div>';
+		echo '</form></div></div>';
 	}
 
 	public function handle_support_submission() {

@@ -59,16 +59,21 @@ class BWS_Admin_Cleanup {
 		if ( $this->settings->get( 'restrict_plugin_install', 1 ) ) {
 			$selectors[] = '#menu-plugins .wp-submenu a[href="plugin-install.php"]';
 			$selectors[] = 'a.page-title-action[href*="plugin-install.php"]';
-			$selectors[] = 'a.page-title-action[href*="plugin-install.php?tab=upload"]';
+			$selectors[] = '.plugins-php .page-title-action';
 		}
 
 		if ( $this->settings->get( 'restrict_theme_switch', 1 ) ) {
 			$selectors[] = '#menu-appearance .wp-submenu a[href="themes.php"]';
-			$selectors[] = '#menu-appearance .wp-submenu a[href="theme-install.php"]';
 		}
 
 		if ( $this->settings->get( 'restrict_theme_install', 1 ) ) {
+			$selectors[] = '#menu-appearance .wp-submenu a[href="theme-install.php"]';
 			$selectors[] = 'a.page-title-action[href*="theme-install.php"]';
+			$selectors[] = '.theme-browser .page-title-action';
+		}
+
+		if ( $this->settings->get( 'restrict_updates_page', 1 ) ) {
+			$selectors[] = '#menu-dashboard .wp-submenu a[href="update-core.php"]';
 		}
 
 		if ( ! empty( $selectors ) ) {
@@ -100,15 +105,16 @@ class BWS_Admin_Cleanup {
 			remove_menu_page( 'themes.php' );
 		}
 
+		if ( $this->settings->get( 'restrict_updates_page', 1 ) ) {
+			remove_submenu_page( 'index.php', 'update-core.php' );
+		}
 		if ( $this->settings->get( 'restrict_plugin_install', 1 ) ) {
 			remove_submenu_page( 'plugins.php', 'plugin-install.php' );
 		}
-
 		if ( $this->settings->get( 'restrict_theme_switch', 1 ) ) {
 			remove_submenu_page( 'themes.php', 'themes.php' );
 			remove_submenu_page( 'themes.php', 'customize.php' );
 		}
-
 		if ( $this->settings->get( 'restrict_theme_install', 1 ) ) {
 			remove_submenu_page( 'themes.php', 'theme-install.php' );
 		}
