@@ -4,23 +4,16 @@ if ( ! defined( 'ABSPATH' ) ) {
 }
 
 class BWS_Plugin {
-	/** @var BWS_Plugin|null */
 	private static $instance = null;
 
-	/** @var BWS_Settings */
 	public $settings;
-
-	/** @var BWS_Dashboard */
 	public $dashboard;
-
-	/** @var BWS_Admin_Cleanup */
 	public $admin_cleanup;
-
-	/** @var BWS_Branding */
 	public $branding;
-
-	/** @var BWS_Support */
 	public $support;
+	public $login_branding;
+	public $menu_labels;
+	public $whitelabel;
 
 	public static function instance() {
 		if ( null === self::$instance ) {
@@ -30,11 +23,14 @@ class BWS_Plugin {
 	}
 
 	private function __construct() {
-		$this->settings      = new BWS_Settings();
-		$this->dashboard     = new BWS_Dashboard( $this->settings );
-		$this->admin_cleanup = new BWS_Admin_Cleanup( $this->settings );
-		$this->branding      = new BWS_Branding( $this->settings );
-		$this->support       = new BWS_Support( $this->settings );
+		$this->settings       = new BWS_Settings();
+		$this->dashboard      = new BWS_Dashboard( $this->settings );
+		$this->admin_cleanup  = new BWS_Admin_Cleanup( $this->settings );
+		$this->branding       = new BWS_Branding( $this->settings );
+		$this->support        = new BWS_Support( $this->settings );
+		$this->login_branding = new BWS_Login_Branding( $this->settings );
+		$this->menu_labels    = new BWS_Menu_Labels( $this->settings );
+		$this->whitelabel     = new BWS_Whitelabel( $this->settings );
 
 		$this->hooks();
 	}

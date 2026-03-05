@@ -4,31 +4,20 @@ if ( ! defined( 'ABSPATH' ) ) {
 }
 
 class BWS_Support {
-	/** @var BWS_Settings */
 	private $settings;
 
 	public function __construct( BWS_Settings $settings ) {
 		$this->settings = $settings;
-		$this->hooks();
-	}
-
-	private function hooks() {
 		add_action( 'admin_menu', [ $this, 'register_support_page' ], 50 );
 		add_action( 'wp_dashboard_setup', [ $this, 'register_dashboard_widget' ], 20 );
 		add_action( 'admin_post_bws_submit_support_request', [ $this, 'handle_support_submission' ] );
 	}
 
 	public function register_support_page() {
-		if ( ! is_admin() || ! current_user_can( 'read' ) ) {
+		if ( ! is_admin() || ! current_user_can( 'read' ) || ! $this->settings->get( 'support_page_enabled', 1 ) ) {
 			return;
 		}
-
-		if ( ! $this->settings->get( 'support_page_enabled', 1 ) ) {
-			return;
-		}
-
 		$label = (string) $this->settings->get( 'support_page_label', 'Website Support' );
-
 		add_menu_page(
 			__( 'Website Support', BWS_TEXT_DOMAIN ),
 			$label,
@@ -41,19 +30,10 @@ class BWS_Support {
 	}
 
 	public function register_dashboard_widget() {
-		if ( ! $this->settings->get( 'support_widget_enabled', 1 ) ) {
+		if ( ! current_user_can( 'read' ) || ! $this->settings->get( 'support_widget_enabled', 1 ) ) {
 			return;
 		}
-
-		if ( ! current_user_can( 'read' ) ) {
-			return;
-		}
-
-		wp_add_dashboard_widget(
-			'bws_website_support_widget',
-			__( 'Website Support', BWS_TEXT_DOMAIN ),
-			[ $this, 'render_dashboard_widget' ]
-		);
+		wp_add_dashboard_widget( 'bws_website_support_widget', __( 'Website Support', BWS_TEXT_DOMAIN ), [ $this, 'render_dashboard_widget' ] );
 	}
 
 	public function render_dashboard_widget() {
@@ -64,7 +44,6 @@ class BWS_Support {
 		if ( ! current_user_can( 'read' ) ) {
 			wp_die( esc_html__( 'You do not have permission to access this page.', BWS_TEXT_DOMAIN ) );
 		}
-
 		echo '<div class="wrap"><h1>' . esc_html__( 'Website Support', BWS_TEXT_DOMAIN ) . '</h1>';
 		$this->render_support_ui( 'page' );
 		echo '</div>';
@@ -73,13 +52,8 @@ class BWS_Support {
 	private function get_topics() {
 		$raw = (string) $this->settings->get( 'support_topic_options', '' );
 		$topics = preg_split( '/\r\n|\r|\n/', $raw );
-		$topics = array_filter( array_map( 'trim', (array) $topics ) );
-
-		if ( empty( $topics ) ) {
-			$topics = [ 'Technical Support', 'Content Update Request', 'Other' ];
-		}
-
-		return array_values( $topics );
+		$topics = array_values( array_filter( array_map( 'trim', (array) $topics ) ) );
+		return ! empty( $topics ) ? $topics : [ 'Technical Support', 'Content Update Request', 'Other' ];
 	}
 
 	private function render_branding_block() {
@@ -87,30 +61,24 @@ class BWS_Support {
 		$intro    = (string) $this->settings->get( 'branding_support_widget_intro', 'Managed Website Support by Best Website' );
 		$email    = (string) $this->settings->get( 'support_email', 'support@bestwebsite.com' );
 
-		echo '<div style="margin-bottom:12px;padding:12px;border:1px solid #dcdcde;border-radius:6px;background:#fff;">';
-
+		echo '<div style="margin-bottom:12px;padding:12px;border:1px solid #dcdcde;border-radius:8px;background:#fff;">';
 		if ( $logo_url ) {
-			echo '<p style="margin:0 0 8px 0;"><img src="' . esc_url( $logo_url ) . '" alt="" style="max-height:40px;width:auto;"></p>';
+			echo '<p style="margin:0 0 8px 0;"><img src="' . esc_url( $logo_url ) . '" alt="" style="max-height:44px;width:auto;"></p>';
 		}
-
 		echo '<p style="margin:0 0 6px 0;font-weight:600;">' . esc_html( $intro ) . '</p>';
 		echo '<p style="margin:0;color:#50575e;">' . esc_html__( 'Email:', BWS_TEXT_DOMAIN ) . ' <a href="mailto:' . esc_attr( $email ) . '">' . esc_html( $email ) . '</a></p>';
 		echo '</div>';
 	}
 
 	private function render_support_ui( $context = 'dashboard' ) {
-		$instructions = (string) $this->settings->get( 'support_instructions_text', '' );
-		$topics       = $this->get_topics();
-
 		$status = isset( $_GET['bws_support_status'] ) ? sanitize_key( wp_unslash( $_GET['bws_support_status'] ) ) : '';
 		if ( 'success' === $status ) {
 			echo '<div class="notice notice-success inline"><p>' . esc_html( (string) $this->settings->get( 'support_success_message', 'Your message has been sent.' ) ) . '</p></div>';
 		} elseif ( 'error' === $status ) {
-			echo '<div class="notice notice-error inline"><p>' . esc_html__( 'Sorry, there was a problem sending your message. Please try again or email support directly.', BWS_TEXT_DOMAIN ) . '</p></div>';
+			echo '<div class="notice notice-error inline"><p>' . esc_html__( 'There was a problem sending your message. Please try again or email support directly.', BWS_TEXT_DOMAIN ) . '</p></div>';
 		}
 
 		$this->render_branding_block();
-
 		if ( 'page' === $context ) {
 			$page_intro = (string) $this->settings->get( 'branding_support_page_intro', '' );
 			if ( '' !== trim( $page_intro ) ) {
@@ -118,40 +86,25 @@ class BWS_Support {
 			}
 		}
 
+		$instructions = (string) $this->settings->get( 'support_instructions_text', '' );
 		if ( '' !== trim( $instructions ) ) {
 			echo '<p>' . esc_html( $instructions ) . '</p>';
 		}
 
 		$current_user = wp_get_current_user();
-
 		echo '<form method="post" action="' . esc_url( admin_url( 'admin-post.php' ) ) . '">';
 		wp_nonce_field( 'bws_submit_support_request', 'bws_support_nonce' );
 		echo '<input type="hidden" name="action" value="bws_submit_support_request">';
-
 		echo '<table class="form-table" role="presentation"><tbody>';
-
-		echo '<tr><th scope="row"><label for="bws_support_topic">' . esc_html__( 'Topic', BWS_TEXT_DOMAIN ) . '</label></th><td>';
-		echo '<select id="bws_support_topic" name="bws_support_topic" required>';
-		foreach ( $topics as $topic ) {
+		echo '<tr><th scope="row"><label for="bws_support_topic">' . esc_html__( 'Topic', BWS_TEXT_DOMAIN ) . '</label></th><td><select id="bws_support_topic" name="bws_support_topic" required>';
+		foreach ( $this->get_topics() as $topic ) {
 			echo '<option value="' . esc_attr( $topic ) . '">' . esc_html( $topic ) . '</option>';
 		}
-		echo '</select>';
-		echo '</td></tr>';
-
-		echo '<tr><th scope="row"><label for="bws_support_message">' . esc_html__( 'Message', BWS_TEXT_DOMAIN ) . '</label></th><td>';
-		echo '<textarea id="bws_support_message" name="bws_support_message" rows="6" class="large-text" required></textarea>';
-		echo '</td></tr>';
-
-		echo '<tr><th scope="row"><label for="bws_support_name">' . esc_html__( 'Your Name', BWS_TEXT_DOMAIN ) . '</label></th><td>';
-		echo '<input id="bws_support_name" type="text" name="bws_support_name" class="regular-text" value="' . esc_attr( $current_user->display_name ) . '">';
-		echo '</td></tr>';
-
-		echo '<tr><th scope="row"><label for="bws_support_email">' . esc_html__( 'Your Email', BWS_TEXT_DOMAIN ) . '</label></th><td>';
-		echo '<input id="bws_support_email" type="email" name="bws_support_email" class="regular-text" value="' . esc_attr( $current_user->user_email ) . '">';
-		echo '</td></tr>';
-
+		echo '</select></td></tr>';
+		echo '<tr><th scope="row"><label for="bws_support_message">' . esc_html__( 'Message', BWS_TEXT_DOMAIN ) . '</label></th><td><textarea id="bws_support_message" name="bws_support_message" rows="6" class="large-text" required></textarea></td></tr>';
+		echo '<tr><th scope="row"><label for="bws_support_name">' . esc_html__( 'Your Name', BWS_TEXT_DOMAIN ) . '</label></th><td><input id="bws_support_name" type="text" name="bws_support_name" class="regular-text" value="' . esc_attr( $current_user->display_name ) . '"></td></tr>';
+		echo '<tr><th scope="row"><label for="bws_support_email">' . esc_html__( 'Your Email', BWS_TEXT_DOMAIN ) . '</label></th><td><input id="bws_support_email" type="email" name="bws_support_email" class="regular-text" value="' . esc_attr( $current_user->user_email ) . '"></td></tr>';
 		echo '</tbody></table>';
-
 		submit_button( __( 'Send Support Request', BWS_TEXT_DOMAIN ) );
 		echo '</form>';
 	}
@@ -160,7 +113,6 @@ class BWS_Support {
 		if ( ! is_admin() || ! current_user_can( 'read' ) ) {
 			wp_die( esc_html__( 'You do not have permission to submit this form.', BWS_TEXT_DOMAIN ) );
 		}
-
 		check_admin_referer( 'bws_submit_support_request', 'bws_support_nonce' );
 
 		$topic   = isset( $_POST['bws_support_topic'] ) ? sanitize_text_field( wp_unslash( $_POST['bws_support_topic'] ) ) : 'Other';
@@ -168,11 +120,7 @@ class BWS_Support {
 		$name    = isset( $_POST['bws_support_name'] ) ? sanitize_text_field( wp_unslash( $_POST['bws_support_name'] ) ) : '';
 		$email   = isset( $_POST['bws_support_email'] ) ? sanitize_email( wp_unslash( $_POST['bws_support_email'] ) ) : '';
 
-		$redirect = wp_get_referer();
-		if ( ! $redirect ) {
-			$redirect = admin_url( 'admin.php?page=' . BWS_SUPPORT_PAGE_SLUG );
-		}
-
+		$redirect = wp_get_referer() ?: admin_url( 'admin.php?page=' . BWS_SUPPORT_PAGE_SLUG );
 		if ( '' === trim( $message ) ) {
 			wp_safe_redirect( add_query_arg( 'bws_support_status', 'error', $redirect ) );
 			exit;
@@ -186,23 +134,21 @@ class BWS_Support {
 
 		$site_name = wp_specialchars_decode( get_bloginfo( 'name' ), ENT_QUOTES );
 		$site_url  = home_url();
+		$subject   = sprintf( '[Website Support] %s — %s', $topic, $site_name ?: $site_url );
 
-		$subject = sprintf('[Website Support] %s — %s', $topic, $site_name ?: $site_url);
-
-		$lines = [];
+		$lines   = [];
 		$lines[] = 'Topic: ' . $topic;
 		$lines[] = 'Message:';
 		$lines[] = $message;
 		$lines[] = '';
 		$lines[] = 'Submitted by: ' . ( $name ?: '(not provided)' );
 		$lines[] = 'Email: ' . ( $email ?: '(not provided)' );
-		$lines[] = '';
 
 		if ( $this->settings->get( 'support_include_diagnostics', 1 ) ) {
 			$current_user = wp_get_current_user();
 			$theme        = wp_get_theme();
 			$screen       = function_exists( 'get_current_screen' ) ? get_current_screen() : null;
-
+			$lines[] = '';
 			$lines[] = '--- Diagnostics ---';
 			$lines[] = 'Site Name: ' . $site_name;
 			$lines[] = 'Site URL: ' . $site_url;
@@ -215,30 +161,27 @@ class BWS_Support {
 			$lines[] = 'PHP Version: ' . PHP_VERSION;
 			$lines[] = 'Theme: ' . $theme->get( 'Name' ) . ' (' . $theme->get( 'Version' ) . ')';
 			$lines[] = 'Locale: ' . get_locale();
-			$lines[] = 'Memory Limit: ' . ( defined( 'WP_MEMORY_LIMIT' ) ? WP_MEMORY_LIMIT : '' );
-			$lines[] = 'Admin Page URL: ' . ( isset( $_SERVER['REQUEST_URI'] ) ? esc_url_raw( home_url( wp_unslash( $_SERVER['REQUEST_URI'] ) ) ) : '' );
-
-			if ( $screen ) {
+			$lines[] = 'Memory Limit: ' . ( defined( 'WP_MEMORY_LIMIT' ) ? WP_MEMORY_LIMIT : 'n/a' );
+			if ( isset( $_SERVER['REQUEST_URI'] ) ) {
+				$lines[] = 'Admin Page URL: ' . home_url( wp_unslash( $_SERVER['REQUEST_URI'] ) );
+			}
+			if ( $screen && isset( $screen->id ) ) {
 				$lines[] = 'Screen ID: ' . $screen->id;
 			}
-
 			if ( ! function_exists( 'get_plugins' ) ) {
 				require_once ABSPATH . 'wp-admin/includes/plugin.php';
 			}
 			if ( function_exists( 'get_plugins' ) ) {
-				$plugins = get_plugins();
-				$lines[] = 'Installed Plugins Count: ' . count( (array) $plugins );
+				$lines[] = 'Installed Plugins Count: ' . count( (array) get_plugins() );
 			}
 		}
 
-		$headers = [];
+		$headers = [ 'Content-Type: text/plain; charset=UTF-8' ];
 		if ( $email && is_email( $email ) ) {
-			$headers[] = 'Reply-To: ' . $name . ' <' . $email . '>';
+			$headers[] = 'Reply-To: ' . ( $name ? $name : 'Website User' ) . ' <' . $email . '>';
 		}
-		$headers[] = 'Content-Type: text/plain; charset=UTF-8';
 
 		$sent = wp_mail( $to, $subject, implode( "\n", $lines ), $headers );
-
 		wp_safe_redirect( add_query_arg( 'bws_support_status', $sent ? 'success' : 'error', $redirect ) );
 		exit;
 	}
