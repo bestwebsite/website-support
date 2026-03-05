@@ -14,13 +14,12 @@ class BWS_Support {
 		add_action( 'admin_head', [ $this, 'admin_support_styles' ] );
 	}
 
-
 	public function admin_support_styles() {
 		if ( ! is_admin() ) {
 			return;
 		}
-		$screen = function_exists( 'get_current_screen' ) ? get_current_screen() : null;
-		$screen_id = $screen && isset( $screen->id ) ? (string) $screen->id : '';
+		$screen           = function_exists( 'get_current_screen' ) ? get_current_screen() : null;
+		$screen_id        = $screen && isset( $screen->id ) ? (string) $screen->id : '';
 		$is_support_screen = in_array( $screen_id, [ 'dashboard', 'toplevel_page_' . BWS_SUPPORT_PAGE_SLUG ], true );
 		if ( ! $is_support_screen ) {
 			return;
@@ -84,7 +83,7 @@ class BWS_Support {
 	}
 
 	private function get_topics() {
-		$raw = (string) $this->settings->get( 'support_topic_options', '' );
+		$raw    = (string) $this->settings->get( 'support_topic_options', '' );
 		$topics = preg_split( '/\r\n|\r|\n/', $raw );
 		$topics = array_values( array_filter( array_map( 'trim', (array) $topics ) ) );
 		return ! empty( $topics ) ? $topics : [ 'Technical Support', 'Content Update Request', 'Other' ];
@@ -116,6 +115,7 @@ class BWS_Support {
 		}
 
 		$this->render_branding_block();
+
 		if ( 'page' === $context ) {
 			$page_intro = (string) $this->settings->get( 'branding_support_page_intro', '' );
 			if ( '' !== trim( $page_intro ) ) {
@@ -134,14 +134,19 @@ class BWS_Support {
 		wp_nonce_field( 'bws_submit_support_request', 'bws_support_nonce' );
 		echo '<input type="hidden" name="action" value="bws_submit_support_request">';
 		echo '<div class="bws-support-grid">';
+
 		echo '<label for="bws_support_topic">' . esc_html__( 'Topic', BWS_TEXT_DOMAIN ) . '</label><div><select id="bws_support_topic" name="bws_support_topic" required>';
 		foreach ( $this->get_topics() as $topic ) {
 			echo '<option value="' . esc_attr( $topic ) . '">' . esc_html( $topic ) . '</option>';
 		}
 		echo '</select></div>';
+
 		echo '<label for="bws_support_message">' . esc_html__( 'Message', BWS_TEXT_DOMAIN ) . '</label><div><textarea id="bws_support_message" name="bws_support_message" rows="6" class="large-text" required></textarea></div>';
+
 		echo '<label for="bws_support_name">' . esc_html__( 'Your Name', BWS_TEXT_DOMAIN ) . '</label><div><input id="bws_support_name" type="text" name="bws_support_name" class="regular-text" value="' . esc_attr( $current_user->display_name ) . '"></div>';
+
 		echo '<label for="bws_support_email">' . esc_html__( 'Your Email', BWS_TEXT_DOMAIN ) . '</label><div><input id="bws_support_email" type="email" name="bws_support_email" class="regular-text" value="' . esc_attr( $current_user->user_email ) . '"></div>';
+
 		echo '</div>';
 		echo '<div class="bws-support-actions">';
 		submit_button( __( 'Send Support Request', BWS_TEXT_DOMAIN ), 'primary', 'submit', false );
@@ -174,7 +179,18 @@ class BWS_Support {
 
 		$site_name = wp_specialchars_decode( get_bloginfo( 'name' ), ENT_QUOTES );
 		$site_url  = home_url();
-		$subject   = sprintf( '[Website Support] %s — %s', $topic, $site_name ?: $site_url );
+
+		// Subject format: [Selected Topic] New Message from Name
+		$subject_name = trim( (string) $name );
+		if ( '' === $subject_name ) {
+			$subject_name = 'Website User';
+		}
+
+		$subject = sprintf(
+			'[%s] New Message from %s',
+			$topic,
+			$subject_name
+		);
 
 		$lines   = [];
 		$lines[] = 'Topic: ' . $topic;
@@ -188,6 +204,7 @@ class BWS_Support {
 			$current_user = wp_get_current_user();
 			$theme        = wp_get_theme();
 			$screen       = function_exists( 'get_current_screen' ) ? get_current_screen() : null;
+
 			$lines[] = '';
 			$lines[] = '--- Diagnostics ---';
 			$lines[] = 'Site Name: ' . $site_name;
@@ -202,12 +219,15 @@ class BWS_Support {
 			$lines[] = 'Theme: ' . $theme->get( 'Name' ) . ' (' . $theme->get( 'Version' ) . ')';
 			$lines[] = 'Locale: ' . get_locale();
 			$lines[] = 'Memory Limit: ' . ( defined( 'WP_MEMORY_LIMIT' ) ? WP_MEMORY_LIMIT : 'n/a' );
+
 			if ( isset( $_SERVER['REQUEST_URI'] ) ) {
 				$lines[] = 'Admin Page URL: ' . home_url( wp_unslash( $_SERVER['REQUEST_URI'] ) );
 			}
+
 			if ( $screen && isset( $screen->id ) ) {
 				$lines[] = 'Screen ID: ' . $screen->id;
 			}
+
 			if ( ! function_exists( 'get_plugins' ) ) {
 				require_once ABSPATH . 'wp-admin/includes/plugin.php';
 			}
