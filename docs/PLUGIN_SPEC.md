@@ -205,3 +205,28 @@ All settings are stored in a single options array: `bw_support_settings`.
 - Optional “check-in” inventory endpoint (if needed beyond WP remote)
 
 ---
+
+## Release Checklist (Maintain Consistency)
+
+When preparing a new release:
+
+1. Update **CHANGELOG.md**
+   - Move items from `[Unreleased]` into a new version section (e.g., `[1.0.1] - YYYY-MM-DD`).
+   - Keep `[Unreleased]` at the top.
+
+2. Update **docs/PLUGIN_SPEC.md** (only if behavior/defaults/workflows/settings changed)
+   - Ensure defaults list matches `get_defaults()`.
+   - Ensure any new settings keys are documented.
+
+3. Commit changes to `main`.
+
+4. Create and push a tag `vX.Y.Z`
+   - Tag is the source of truth for versioning.
+   - The GitHub Action will:
+     - patch plugin version in code
+     - build `website-support.zip`
+     - create GitHub Release + upload ZIP
+     - sync version patch back to `main`
+
+5. After release:
+   - Verify updates appear in WordPress/WP remote on a pilot site.
