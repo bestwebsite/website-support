@@ -3,7 +3,7 @@
  * Plugin Name: Best Website Support
  * Plugin URI: https://bestwebsite.com
  * Description: Best Website client admin cleanup, branding, login customization, and built-in support tools for managed WordPress sites.
- * Version: 1.0.1
+ * Version: 1.0.0
  * Author: Best Website
  * Author URI: https://bestwebsite.com
  * Text Domain: bw-support
@@ -14,7 +14,7 @@ if ( ! defined( 'ABSPATH' ) ) {
 	exit;
 }
 
-define( 'BWS_VERSION', '1.0.1' );
+define( 'BWS_VERSION', '1.0.0' );
 define( 'BWS_GITHUB_OWNER', 'bestwebsite' );
 define( 'BWS_GITHUB_REPO', 'website-support' );
 define( 'BWS_PLUGIN_FILE', __FILE__ );

@@ -18,3 +18,8 @@ Phase A + B scaffold for the Best Website Support plugin.
 - Login branding
 - White-label plugin visibility
 - GitHub updater integration
+
+
+## Releases & Updates
+
+This plugin is updated via GitHub Releases. Tag a version like `v1.0.1` to trigger the release workflow, which builds `website-support.zip` and publishes a release. Client sites will see updates automatically via the built-in GitHub updater.
