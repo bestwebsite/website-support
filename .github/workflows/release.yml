@@ -1,0 +1,85 @@
+name: Release
+
+on:
+  push:
+    tags:
+      - 'v*.*.*'
+
+permissions:
+  contents: write
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout tagged commit
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Set version from tag
+        id: vars
+        run: |
+          TAG="${GITHUB_REF_NAME}"
+          VERSION="${TAG#v}"
+          echo "tag=$TAG" >> $GITHUB_OUTPUT
+          echo "version=$VERSION" >> $GITHUB_OUTPUT
+
+      - name: Patch plugin version in website-support.php
+        run: |
+          VERSION="${{ steps.vars.outputs.version }}"
+          FILE="website-support.php"
+
+          if [ ! -f "$FILE" ]; then
+            echo "ERROR: $FILE not found at repo root."
+            exit 1
+          fi
+
+          # Update "Version: x.y.z" line in plugin header
+          perl -0777 -i -pe "s/(^\\s*\\*\\s*Version:\\s*)[0-9]+\\.[0-9]+\\.[0-9]+/\\\$1$VERSION/m" "$FILE"
+
+          # Update define( 'BWS_VERSION', 'x.y.z' );
+          perl -0777 -i -pe "s/(define\\(\\s*'BWS_VERSION'\\s*,\\s*')[0-9]+\\.[0-9]+\\.[0-9]+('\\s*\\)\\s*;)/\\\$1$VERSION\\\$2/g" "$FILE"
+
+          echo "Patched $FILE to version $VERSION"
+
+      - name: Build release ZIP (website-support.zip)
+        run: |
+          mkdir -p dist
+          zip -r dist/website-support.zip . \
+            -x ".git/*" \
+            -x ".github/*" \
+            -x "dist/*" \
+            -x "**/.DS_Store"
+
+      - name: Create GitHub Release and upload asset
+        uses: softprops/action-gh-release@v2
+        with:
+          name: ${{ steps.vars.outputs.tag }}
+          tag_name: ${{ steps.vars.outputs.tag }}
+          generate_release_notes: true
+          files: dist/website-support.zip
+
+      - name: Sync version back to main branch
+        run: |
+          VERSION="${{ steps.vars.outputs.version }}"
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+
+          git fetch origin main
+          git checkout main
+
+          FILE="website-support.php"
+
+          perl -0777 -i -pe "s/(^\\s*\\*\\s*Version:\\s*)[0-9]+\\.[0-9]+\\.[0-9]+/\\\$1$VERSION/m" "$FILE"
+          perl -0777 -i -pe "s/(define\\(\\s*'BWS_VERSION'\\s*,\\s*')[0-9]+\\.[0-9]+\\.[0-9]+('\\s*\\)\\s*;)/\\\$1$VERSION\\\$2/g" "$FILE"
+
+          if git diff --quiet; then
+            echo "No changes to commit on main."
+            exit 0
+          fi
+
+          git add "$FILE"
+          git commit -m "Bump version to $VERSION"
+          git push origin main
