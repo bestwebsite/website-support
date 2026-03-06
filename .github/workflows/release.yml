@@ -13,12 +13,12 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-      - name: Checkout tagged commit
+      - name: "Checkout tagged commit"
         uses: actions/checkout@v4
         with:
           fetch-depth: 0
 
-      - name: Set version from tag
+      - name: "Set version from tag"
         id: vars
         shell: bash
         run: |
@@ -30,7 +30,7 @@ jobs:
       # ----------------------------
       # Pre-release validation
       # ----------------------------
-      - name: Pre-release validation (required files + constants)
+      - name: "Pre-release validation (required files + constants)"
         shell: bash
         run: |
           set -euo pipefail
@@ -49,6 +49,7 @@ jobs:
             exit 1
           fi
 
+          # Sanity check repo constants match this repo
           if ! grep -qE "define\(\s*'BWS_GITHUB_OWNER'\s*,\s*'bestwebsite'\s*\)" website-support.php; then
             echo "ERROR: BWS_GITHUB_OWNER is not set to 'bestwebsite' in website-support.php"
             exit 1
@@ -61,7 +62,7 @@ jobs:
 
           echo "Pre-release validation passed."
 
-      - name: Guard: CHANGELOG must contain this version
+      - name: "Guard - CHANGELOG must contain this version"
         shell: bash
         run: |
           set -euo pipefail
@@ -76,7 +77,7 @@ jobs:
       # ----------------------------
       # Patch version in plugin file
       # ----------------------------
-      - name: Patch plugin version in website-support.php
+      - name: "Patch plugin version in website-support.php"
         shell: bash
         run: |
           set -euo pipefail
@@ -94,14 +95,13 @@ jobs:
       # ----------------------------
       # Build zip for release asset
       # ----------------------------
-      - name: Build release ZIP (website-support.zip)
+      - name: "Build release ZIP (website-support.zip)"
         shell: bash
         run: |
           set -euo pipefail
           mkdir -p dist
 
           # Build a clean plugin ZIP with correct top-level folder name: website-support/
-          # (GitHub zipball can produce hashed folder names; this ensures a stable install folder.)
           rsync -a --delete \
             --exclude ".git" \
             --exclude ".github" \
@@ -113,13 +113,13 @@ jobs:
 
           echo "Built dist/website-support.zip"
 
-      - name: Validate ZIP content
+      - name: "Validate ZIP content"
         shell: bash
         run: |
           set -euo pipefail
           if ! unzip -l dist/website-support.zip | grep -q "website-support/website-support.php"; then
             echo "ERROR: ZIP validation failed. Expected website-support/website-support.php inside the ZIP."
-            unzip -l dist/website-support.zip | head -n 60
+            unzip -l dist/website-support.zip | head -n 80
             exit 1
           fi
           echo "ZIP content validation passed."
@@ -127,7 +127,7 @@ jobs:
       # ----------------------------
       # Create release + upload asset
       # ----------------------------
-      - name: Create GitHub Release and upload asset
+      - name: "Create GitHub Release and upload asset"
         uses: softprops/action-gh-release@v2
         with:
           name: ${{ steps.vars.outputs.tag }}
@@ -138,7 +138,7 @@ jobs:
       # ----------------------------
       # Sync version patch back to main
       # ----------------------------
-      - name: Sync version back to main branch
+      - name: "Sync version back to main branch"
         shell: bash
         run: |
           set -euo pipefail
