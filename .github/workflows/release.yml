@@ -3,7 +3,7 @@ name: Release
 on:
   push:
     tags:
-      - 'v*.*.*'
+      - "v*.*.*"
 
 permissions:
   contents: write
@@ -20,21 +20,68 @@ jobs:
 
       - name: Set version from tag
         id: vars
+        shell: bash
         run: |
           TAG="${GITHUB_REF_NAME}"
           VERSION="${TAG#v}"
-          echo "tag=$TAG" >> $GITHUB_OUTPUT
-          echo "version=$VERSION" >> $GITHUB_OUTPUT
+          echo "tag=$TAG" >> "$GITHUB_OUTPUT"
+          echo "version=$VERSION" >> "$GITHUB_OUTPUT"
 
-      - name: Patch plugin version in website-support.php
+      # ----------------------------
+      # Pre-release validation
+      # ----------------------------
+      - name: Pre-release validation (required files + constants)
+        shell: bash
         run: |
-          VERSION="${{ steps.vars.outputs.version }}"
-          FILE="website-support.php"
+          set -euo pipefail
 
-          if [ ! -f "$FILE" ]; then
-            echo "ERROR: $FILE not found at repo root."
+          # Required files
+          for f in "website-support.php" "CHANGELOG.md" "docs/PLUGIN_SPEC.md"; do
+            if [ ! -f "$f" ]; then
+              echo "ERROR: Required file missing: $f"
+              exit 1
+            fi
+          done
+
+          # Basic plugin header checks
+          if ! grep -qE '^\s*\*\s*Plugin Name:\s*' website-support.php; then
+            echo "ERROR: website-support.php missing Plugin Name header."
             exit 1
           fi
+
+          if ! grep -qE "define\(\s*'BWS_GITHUB_OWNER'\s*,\s*'bestwebsite'\s*\)" website-support.php; then
+            echo "ERROR: BWS_GITHUB_OWNER is not set to 'bestwebsite' in website-support.php"
+            exit 1
+          fi
+
+          if ! grep -qE "define\(\s*'BWS_GITHUB_REPO'\s*,\s*'website-support'\s*\)" website-support.php; then
+            echo "ERROR: BWS_GITHUB_REPO is not set to 'website-support' in website-support.php"
+            exit 1
+          fi
+
+          echo "Pre-release validation passed."
+
+      - name: Guard: CHANGELOG must contain this version
+        shell: bash
+        run: |
+          set -euo pipefail
+          VERSION="${{ steps.vars.outputs.version }}"
+          if ! grep -qE "^## \[$VERSION\]" CHANGELOG.md; then
+            echo "ERROR: CHANGELOG.md does not contain a release heading for version $VERSION"
+            echo "Expected a line like: ## [$VERSION] - YYYY-MM-DD"
+            exit 1
+          fi
+          echo "CHANGELOG guard passed."
+
+      # ----------------------------
+      # Patch version in plugin file
+      # ----------------------------
+      - name: Patch plugin version in website-support.php
+        shell: bash
+        run: |
+          set -euo pipefail
+          VERSION="${{ steps.vars.outputs.version }}"
+          FILE="website-support.php"
 
           # Update "Version: x.y.z" line in plugin header
           perl -0777 -i -pe "s/(^\\s*\\*\\s*Version:\\s*)[0-9]+\\.[0-9]+\\.[0-9]+/\\\$1$VERSION/m" "$FILE"
@@ -44,15 +91,42 @@ jobs:
 
           echo "Patched $FILE to version $VERSION"
 
+      # ----------------------------
+      # Build zip for release asset
+      # ----------------------------
       - name: Build release ZIP (website-support.zip)
+        shell: bash
         run: |
+          set -euo pipefail
           mkdir -p dist
-          zip -r dist/website-support.zip . \
-            -x ".git/*" \
-            -x ".github/*" \
-            -x "dist/*" \
-            -x "**/.DS_Store"
 
+          # Build a clean plugin ZIP with correct top-level folder name: website-support/
+          # (GitHub zipball can produce hashed folder names; this ensures a stable install folder.)
+          rsync -a --delete \
+            --exclude ".git" \
+            --exclude ".github" \
+            --exclude "dist" \
+            --exclude "**/.DS_Store" \
+            ./ dist/website-support/
+
+          (cd dist && zip -r website-support.zip website-support >/dev/null)
+
+          echo "Built dist/website-support.zip"
+
+      - name: Validate ZIP content
+        shell: bash
+        run: |
+          set -euo pipefail
+          if ! unzip -l dist/website-support.zip | grep -q "website-support/website-support.php"; then
+            echo "ERROR: ZIP validation failed. Expected website-support/website-support.php inside the ZIP."
+            unzip -l dist/website-support.zip | head -n 60
+            exit 1
+          fi
+          echo "ZIP content validation passed."
+
+      # ----------------------------
+      # Create release + upload asset
+      # ----------------------------
       - name: Create GitHub Release and upload asset
         uses: softprops/action-gh-release@v2
         with:
@@ -61,16 +135,21 @@ jobs:
           generate_release_notes: true
           files: dist/website-support.zip
 
+      # ----------------------------
+      # Sync version patch back to main
+      # ----------------------------
       - name: Sync version back to main branch
+        shell: bash
         run: |
+          set -euo pipefail
           VERSION="${{ steps.vars.outputs.version }}"
+          FILE="website-support.php"
+
           git config user.name "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
 
           git fetch origin main
           git checkout main
-
-          FILE="website-support.php"
 
           perl -0777 -i -pe "s/(^\\s*\\*\\s*Version:\\s*)[0-9]+\\.[0-9]+\\.[0-9]+/\\\$1$VERSION/m" "$FILE"
           perl -0777 -i -pe "s/(define\\(\\s*'BWS_VERSION'\\s*,\\s*')[0-9]+\\.[0-9]+\\.[0-9]+('\\s*\\)\\s*;)/\\\$1$VERSION\\\$2/g" "$FILE"
