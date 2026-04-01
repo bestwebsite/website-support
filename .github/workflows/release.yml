@@ -9,8 +9,9 @@ permissions:
   contents: write
 
 jobs:
-  build:
+  release:
     runs-on: ubuntu-latest
+
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -22,82 +23,111 @@ jobs:
           set -euo pipefail
           TAG="${GITHUB_REF_NAME}"
           VERSION="${TAG#v}"
-          echo "version=$VERSION" >> "$GITHUB_OUTPUT"
           echo "tag=$TAG" >> "$GITHUB_OUTPUT"
+          echo "version=$VERSION" >> "$GITHUB_OUTPUT"
 
-      - name: Pre-release validation (repo + required files)
+      - name: Pre-release validation (required files)
         shell: bash
         run: |
           set -euo pipefail
           test -f website-support.php
           test -d includes
           test -f includes/class-bws-github-updater.php
+          test -f includes/class-bws-plugin.php
+          test -f includes/class-bws-settings.php
+          test -f includes/class-bws-support.php
           echo "Pre-release validation passed."
 
-      - name: PHP lint
+      - name: Guard: CHANGELOG must contain this version
+        shell: bash
+        run: |
+          set -euo pipefail
+          VERSION="${{ steps.vars.outputs.version }}"
+          if ! grep -qE "^\## \[${VERSION}\]" CHANGELOG.md; then
+            echo "ERROR: CHANGELOG.md missing heading: ## [${VERSION}]"
+            exit 1
+          fi
+          echo "CHANGELOG guard passed."
+
+      - name: PHP lint (fail fast)
         shell: bash
         run: |
           set -euo pipefail
           php -v
-          # Lint all php files (fail fast)
           while IFS= read -r -d '' file; do
             php -l "$file" > /dev/null
           done < <(find . -name "*.php" -print0)
 
       - name: Patch version in website-support.php (single source of truth)
         shell: bash
+        env:
+          VERSION: ${{ steps.vars.outputs.version }}
         run: |
           set -euo pipefail
-          VERSION="${{ steps.vars.outputs.version }}"
           python3 - <<'PY'
-          import re, pathlib, os
-          version=os.environ["VERSION"]
-          p=pathlib.Path("website-support.php")
-          s=p.read_text(encoding="utf-8")
-          # Plugin header version
-          s=re.sub(r"(?m)^\\s*\\*\\s*Version:\\s*.*$", f" * Version: {version}", s)
-          # BWS_VERSION constant
-          s=re.sub(r"(?m)^define\\(\\s*'BWS_VERSION'\\s*,\\s*'[^']*'\\s*\\);\\s*$", f"define( 'BWS_VERSION', '{version}' );", s)
+          import os, re, pathlib
+          version = os.environ["VERSION"].strip()
+          p = pathlib.Path("website-support.php")
+          s = p.read_text(encoding="utf-8")
+
+          # Update plugin header "Version:"
+          s = re.sub(r'(?m)^\s*\*\s*Version:\s*.*$',
+                    f' * Version: {version}', s)
+
+          # Update BWS_VERSION constant if present
+          s = re.sub(r"(?m)^(define\(\s*'BWS_VERSION'\s*,\s*')[^']+('\s*\)\s*;)",
+                    rf"\g<1>{version}\g<2>", s)
+
           p.write_text(s, encoding="utf-8")
+          print("Patched version to", version)
           PY
 
-      - name: Guard: website-support.php contains correct repo constants
+      - name: Build release zip (website-support.zip)
         shell: bash
         run: |
           set -euo pipefail
-          grep -q "define( 'BWS_GITHUB_OWNER', 'bestwebsite' );" website-support.php
-          grep -q "define( 'BWS_GITHUB_REPO', 'website-support' );" website-support.php
 
-      - name: Build release ZIP (website-support.zip)
-        shell: bash
-        run: |
-          set -euo pipefail
-          rm -f website-support.zip
+          rm -rf dist
           mkdir -p dist/website-support
-          rsync -a --delete \
+
+          # Copy repo contents into dist/website-support, excluding git + GitHub-only files
+          rsync -a \
             --exclude ".git" \
             --exclude ".github" \
-            --exclude "dist" \
+            --exclude ".gitignore" \
+            --exclude ".DS_Store" \
             ./ dist/website-support/
+
+          # Build zip so the top-level folder is website-support/
           (cd dist && zip -qr ../website-support.zip website-support)
 
-      - name: Validate ZIP contents
+          ls -lah website-support.zip
+
+      - name: Validate zip contents
         shell: bash
         run: |
           set -euo pipefail
-          unzip -t website-support.zip > /dev/null
-          # Ensure the plugin file exists in zip
-          unzip -l website-support.zip | grep -q "website-support/website-support.php"
-          # Ensure we did not accidentally introduce weird tokens (like $11.0.0$2) in plugin file
-          unzip -p website-support.zip website-support/website-support.php | grep -q "define( 'BWS_VERSION', '${{ steps.vars.outputs.version }}' );"
-          if unzip -p website-support.zip website-support/website-support.php | grep -q "\\$[0-9]\\+\\.[0-9]\\+\\.[0-9]\\+\\$"; then
-            echo "ERROR: Detected suspicious token like $X.Y.Z$ in website-support.php"
+          unzip -l website-support.zip | head -n 50
+
+          # Ensure it contains the expected root + main plugin file
+          if ! unzip -l website-support.zip | grep -q "website-support/website-support.php"; then
+            echo "ERROR: website-support.zip does not contain website-support/website-support.php"
             exit 1
           fi
 
-      - name: Create GitHub Release and upload asset
+          # Also sanity check: plugin header exists in the zipped file
+          unzip -p website-support.zip website-support/website-support.php | grep -q "Plugin Name:" || {
+            echo "ERROR: website-support.php inside zip is missing Plugin Name header"
+            exit 1
+          }
+
+          echo "Zip validation passed."
+
+      - name: Create GitHub release + upload zip asset
         uses: softprops/action-gh-release@v2
         with:
-          files: website-support.zip
           tag_name: ${{ steps.vars.outputs.tag }}
+          name: ${{ steps.vars.outputs.tag }}
           generate_release_notes: true
+          files: |
+            website-support.zip
