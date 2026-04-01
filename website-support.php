@@ -3,7 +3,7 @@
  * Plugin Name: Best Website Support
  * Plugin URI: https://bestwebsite.com
  * Description: Best Website client admin cleanup, branding, login customization, and built-in support tools for managed WordPress sites.
-$11.0.0
+ * Version: 1.0.2
  * Author: Best Website
  * Author URI: https://bestwebsite.com
  * Text Domain: bw-support
@@ -14,7 +14,7 @@ if ( ! defined( 'ABSPATH' ) ) {
 	exit;
 }
 
-$11.0.0$2
+define( 'BWS_VERSION', '1.0.2' );
 define( 'BWS_GITHUB_OWNER', 'bestwebsite' );
 define( 'BWS_GITHUB_REPO', 'website-support' );
 define( 'BWS_PLUGIN_FILE', __FILE__ );
@@ -37,9 +37,12 @@ require_once BWS_PLUGIN_DIR . 'includes/class-bws-login-branding.php';
 require_once BWS_PLUGIN_DIR . 'includes/class-bws-menu-labels.php';
 require_once BWS_PLUGIN_DIR . 'includes/class-bws-whitelabel.php';
 
-add_action( 'plugins_loaded', function() {
+add_action( 'plugins_loaded', function () {
 	load_plugin_textdomain( BWS_TEXT_DOMAIN, false, dirname( BWS_PLUGIN_BASENAME ) . '/languages' );
+
+	// Boot plugin (admin-only features are gated internally).
 	BWS_Plugin::instance();
-	// Enable GitHub-based updates (public repo releases).
+
+	// GitHub Releases updater (public repo).
 	new BWS_GitHub_Updater( BWS_GITHUB_OWNER, BWS_GITHUB_REPO, BWS_PLUGIN_FILE );
 } );

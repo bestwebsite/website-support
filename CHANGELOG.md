@@ -16,15 +16,20 @@ Release tags are formatted as `vX.Y.Z`.
 
 ---
 
-## [1.0.1] - 2026-04-01
-### Added
-- Admin Notice cleanup: **Admin Notice CSS Selectors to Hide** (one CSS selector per line) to hide theme/plugin admin notices without hard-coding per-theme rules.
-
+## [1.0.2] - 2026-04-01
 ### Changed
-- Dashboard widget removal now performs a **late removal pass on the Dashboard screen** to catch widgets added after `wp_dashboard_setup` (notably Elementor’s “Accessibility” dashboard widget).
+- Hardened plugin bootstrap so admin-only features are only initialized in wp-admin (prevents front-end crashes from admin UI code).
+- Added optional “Admin Notice CSS Selectors to Hide” setting (one selector per line) for theme/plugin notices.
 
 ### Fixed
-- Release workflow: version patching no longer risks corrupting plugin PHP files during release packaging (prevents parse errors like `$11.0.0$2` in `website-support.php`).
+- Added a late dashboard widget cleanup pass to remove widgets registered after `wp_dashboard_setup` (e.g., some Elementor/third-party widgets).
+- Improved safety around custom CSS selector handling (sanitization + limits) to avoid breaking admin output.
+
+---
+
+## [1.0.1] - 2026-03-?? 
+### Changed
+- UI polish and admin cleanup improvements.
 
 ---
 
@@ -48,9 +53,3 @@ Release tags are formatted as `vX.Y.Z`.
 - GitHub Releases–based updates:
   - GitHub Action to build and publish release ZIP on tag (`vX.Y.Z`).
   - Plugin updater checks GitHub Releases API, prefers ZIP asset, falls back to `zipball_url`.
-
-### Changed
-- N/A
-
-### Fixed
-- N/A

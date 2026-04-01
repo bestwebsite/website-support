@@ -69,7 +69,7 @@ class BWS_Settings {
 			'login_help_text'                        => 'Website managed by Best Website • support@bestwebsite.com',
 
 			'plugin_whitelabel_enabled'              => 1,
-			'plugin_hide_settings_menu'              => 0,
+			'plugin_show_settings_menu'              => 0,
 			'plugin_hide_from_plugins_list'          => 0,
 			'plugin_hide_plugin_ui_badges'           => 0,
 			'plugin_hide_support_menu_from_adminbar' => 0,
@@ -81,15 +81,10 @@ class BWS_Settings {
 		if ( ! is_array( $saved ) ) {
 			$saved = [];
 		}
-
-		// Backward compatibility: older versions used plugin_show_settings_menu (inverse meaning)
-		if ( ! isset( $saved['plugin_hide_settings_menu'] ) && isset( $saved['plugin_show_settings_menu'] ) ) {
-			$saved['plugin_hide_settings_menu'] = ! empty( $saved['plugin_show_settings_menu'] ) ? 0 : 1;
-		}
-
 		return wp_parse_args( $saved, $this->get_defaults() );
 	}
-public function get( $key, $default = null ) {
+
+	public function get( $key, $default = null ) {
 		$all = $this->get_all();
 		return array_key_exists( $key, $all ) ? $all[ $key ] : $default;
 	}
@@ -142,7 +137,7 @@ public function get( $key, $default = null ) {
 			'support_include_diagnostics',
 			'login_branding_enabled',
 			'plugin_whitelabel_enabled',
-			'plugin_hide_settings_menu',
+			'plugin_show_settings_menu',
 			'plugin_hide_from_plugins_list',
 			'plugin_hide_plugin_ui_badges',
 			'plugin_hide_support_menu_from_adminbar',
@@ -187,27 +182,7 @@ public function get( $key, $default = null ) {
 			$output[ $key ] = isset( $input[ $key ] ) ? sanitize_textarea_field( $input[ $key ] ) : ( $defaults[ $key ] ?? '' );
 		}
 
-		
-		// Extra hardening for admin notice selectors (avoid CSS injection)
-		if ( isset( $output['admin_notice_hide_selectors'] ) ) {
-			$lines = preg_split( '/\r\n|\r|\n/', (string) $output['admin_notice_hide_selectors'] );
-			$clean = [];
-			foreach ( (array) $lines as $line ) {
-				$line = trim( (string) $line );
-				if ( '' === $line ) {
-					continue;
-				}
-				// Remove characters that could break out of selector context
-				$line = str_replace( [ '{', '}', ';', '"', "'" ], '', $line );
-				$line = trim( preg_replace( '/\s+/', ' ', $line ) );
-				if ( '' !== $line ) {
-					$clean[] = $line;
-				}
-			}
-			$output['admin_notice_hide_selectors'] = implode( "\n", $clean );
-		}
-
-foreach ( [ 'label_posts', 'label_pages', 'label_media' ] as $key ) {
+		foreach ( [ 'label_posts', 'label_pages', 'label_media' ] as $key ) {
 			$output[ $key ] = isset( $input[ $key ] ) ? sanitize_text_field( $input[ $key ] ) : '';
 		}
 
@@ -223,7 +198,7 @@ foreach ( [ 'label_posts', 'label_pages', 'label_media' ] as $key ) {
 			return;
 		}
 
-		$parent_slug = $this->get( 'plugin_hide_settings_menu', 0 ) ? null : 'options-general.php';
+		$parent_slug = $this->get( 'plugin_show_settings_menu', 0 ) ? null : 'options-general.php';
 
 		add_submenu_page(
 			$parent_slug,
@@ -300,12 +275,6 @@ foreach ( [ 'label_posts', 'label_pages', 'label_media' ] as $key ) {
 				<p><?php $this->checkbox( 'dashboard_remove_site_health', 'Remove Site Health' ); ?></p>
 				<p><?php $this->checkbox( 'dashboard_remove_welcome_panel', 'Remove Welcome Panel' ); ?></p>
 				<p><?php $this->textarea( 'dashboard_remove_custom_widget_ids',
-
-				<hr>
-				<h2><?php esc_html_e( 'Admin Notice Cleanup', BWS_TEXT_DOMAIN ); ?></h2>
-				<p><?php $this->textarea( 'admin_notice_hide_selectors', 'Admin Notice CSS Selectors to Hide (one per line)', 4 ); ?></p>
-				<p class="description"><?php echo esc_html__( 'Tip: To hide a specific notice, inspect it in your browser and copy a stable CSS selector (for example: .plugin-name-notice or .notice.notice-info).', BWS_TEXT_DOMAIN ); ?></p>
-
 			'admin_notice_hide_selectors', 'Custom Dashboard Widget IDs to Remove (one per line)', 4 ); ?></p>
 
 				<hr>
@@ -374,7 +343,7 @@ foreach ( [ 'label_posts', 'label_pages', 'label_media' ] as $key ) {
 				<hr>
 				<h2><?php esc_html_e( 'Plugin Visibility / White-Label', BWS_TEXT_DOMAIN ); ?></h2>
 				<p><?php $this->checkbox( 'plugin_whitelabel_enabled', 'Enable white-label behavior' ); ?></p>
-				<p><?php $this->checkbox( 'plugin_hide_settings_menu', 'Hide settings page in admin menu (direct URL only)' ); ?></p>
+				<p><?php $this->checkbox( 'plugin_show_settings_menu', 'Hide settings page in admin menu (direct URL only)' ); ?></p>
 				<p><?php $this->checkbox( 'plugin_hide_from_plugins_list', 'Hide this plugin from Plugins list (advanced; test carefully)' ); ?></p>
 				<p><?php $this->checkbox( 'plugin_hide_plugin_ui_badges', 'Hide this plugin’s update row/badges when possible' ); ?></p>
 				<p><?php $this->checkbox( 'plugin_hide_support_menu_from_adminbar', 'Hide support page from admin bar shortcuts (future-safe)' ); ?></p>

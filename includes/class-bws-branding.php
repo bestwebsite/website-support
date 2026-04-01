@@ -10,6 +10,7 @@ class BWS_Branding {
 		$this->settings = $settings;
 		add_filter( 'admin_footer_text', [ $this, 'filter_admin_footer_text' ] );
 		add_filter( 'update_footer', [ $this, 'filter_update_footer_text' ], 999 );
+		add_action( 'admin_head', [ $this, 'output_admin_notice_hide_css' ], 20 );
 	}
 
 	public function filter_admin_footer_text( $text ) {

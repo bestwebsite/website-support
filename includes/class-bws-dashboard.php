@@ -9,9 +9,9 @@ class BWS_Dashboard {
 	public function __construct( BWS_Settings $settings ) {
 		$this->settings = $settings;
 		add_action( 'wp_dashboard_setup', [ $this, 'cleanup_dashboard_widgets' ], 99 );
-		// Some plugins add dashboard widgets late (e.g., Elementor). Run a second removal pass on the Dashboard screen.
-		add_action( 'admin_head-index.php', [ $this, 'cleanup_dashboard_widgets' ], 999 );
 		add_action( 'admin_init', [ $this, 'maybe_remove_welcome_panel' ] );
+		// Late pass for widgets added after wp_dashboard_setup (some plugins do this).
+		add_action( 'admin_head-index.php', [ $this, 'late_cleanup_dashboard_widgets' ], 5 );
 	}
 
 	public function cleanup_dashboard_widgets() {
