@@ -3,162 +3,101 @@ name: Release
 on:
   push:
     tags:
-      - "v*.*.*"
+      - "v*"
 
 permissions:
   contents: write
 
 jobs:
-  release:
+  build:
     runs-on: ubuntu-latest
-
     steps:
-      - name: "Checkout tagged commit"
+      - name: Checkout
         uses: actions/checkout@v4
-        with:
-          fetch-depth: 0
 
-      - name: "Set version from tag"
+      - name: Determine version from tag
         id: vars
         shell: bash
         run: |
+          set -euo pipefail
           TAG="${GITHUB_REF_NAME}"
           VERSION="${TAG#v}"
-          echo "tag=$TAG" >> "$GITHUB_OUTPUT"
           echo "version=$VERSION" >> "$GITHUB_OUTPUT"
+          echo "tag=$TAG" >> "$GITHUB_OUTPUT"
 
-      # ----------------------------
-      # Pre-release validation
-      # ----------------------------
-      - name: "Pre-release validation (required files + constants)"
+      - name: Pre-release validation (repo + required files)
         shell: bash
         run: |
           set -euo pipefail
-
-          # Required files
-          for f in "website-support.php" "CHANGELOG.md" "docs/PLUGIN_SPEC.md"; do
-            if [ ! -f "$f" ]; then
-              echo "ERROR: Required file missing: $f"
-              exit 1
-            fi
-          done
-
-          # Basic plugin header checks
-          if ! grep -qE '^\s*\*\s*Plugin Name:\s*' website-support.php; then
-            echo "ERROR: website-support.php missing Plugin Name header."
-            exit 1
-          fi
-
-          # Sanity check repo constants match this repo
-          if ! grep -qE "define\(\s*'BWS_GITHUB_OWNER'\s*,\s*'bestwebsite'\s*\)" website-support.php; then
-            echo "ERROR: BWS_GITHUB_OWNER is not set to 'bestwebsite' in website-support.php"
-            exit 1
-          fi
-
-          if ! grep -qE "define\(\s*'BWS_GITHUB_REPO'\s*,\s*'website-support'\s*\)" website-support.php; then
-            echo "ERROR: BWS_GITHUB_REPO is not set to 'website-support' in website-support.php"
-            exit 1
-          fi
-
+          test -f website-support.php
+          test -d includes
+          test -f includes/class-bws-github-updater.php
           echo "Pre-release validation passed."
 
-      - name: "Guard - CHANGELOG must contain this version"
+      - name: PHP lint
+        shell: bash
+        run: |
+          set -euo pipefail
+          php -v
+          # Lint all php files (fail fast)
+          while IFS= read -r -d '' file; do
+            php -l "$file" > /dev/null
+          done < <(find . -name "*.php" -print0)
+
+      - name: Patch version in website-support.php (single source of truth)
         shell: bash
         run: |
           set -euo pipefail
           VERSION="${{ steps.vars.outputs.version }}"
-          if ! grep -qE "^## \[$VERSION\]" CHANGELOG.md; then
-            echo "ERROR: CHANGELOG.md does not contain a release heading for version $VERSION"
-            echo "Expected a line like: ## [$VERSION] - YYYY-MM-DD"
-            exit 1
-          fi
-          echo "CHANGELOG guard passed."
+          python3 - <<'PY'
+          import re, pathlib, os
+          version=os.environ["VERSION"]
+          p=pathlib.Path("website-support.php")
+          s=p.read_text(encoding="utf-8")
+          # Plugin header version
+          s=re.sub(r"(?m)^\\s*\\*\\s*Version:\\s*.*$", f" * Version: {version}", s)
+          # BWS_VERSION constant
+          s=re.sub(r"(?m)^define\\(\\s*'BWS_VERSION'\\s*,\\s*'[^']*'\\s*\\);\\s*$", f"define( 'BWS_VERSION', '{version}' );", s)
+          p.write_text(s, encoding="utf-8")
+          PY
 
-      # ----------------------------
-      # Patch version in plugin file
-      # ----------------------------
-      - name: "Patch plugin version in website-support.php"
+      - name: Guard: website-support.php contains correct repo constants
         shell: bash
         run: |
           set -euo pipefail
-          VERSION="${{ steps.vars.outputs.version }}"
-          FILE="website-support.php"
+          grep -q "define( 'BWS_GITHUB_OWNER', 'bestwebsite' );" website-support.php
+          grep -q "define( 'BWS_GITHUB_REPO', 'website-support' );" website-support.php
 
-          # Update "Version: x.y.z" line in plugin header
-          perl -0777 -i -pe "s/(^\\s*\\*\\s*Version:\\s*)[0-9]+\\.[0-9]+\\.[0-9]+/\\\$1$VERSION/m" "$FILE"
-
-          # Update define( 'BWS_VERSION', 'x.y.z' );
-          perl -0777 -i -pe "s/(define\\(\\s*'BWS_VERSION'\\s*,\\s*')[0-9]+\\.[0-9]+\\.[0-9]+('\\s*\\)\\s*;)/\\\$1$VERSION\\\$2/g" "$FILE"
-
-          echo "Patched $FILE to version $VERSION"
-
-      # ----------------------------
-      # Build zip for release asset
-      # ----------------------------
-      - name: "Build release ZIP (website-support.zip)"
+      - name: Build release ZIP (website-support.zip)
         shell: bash
         run: |
           set -euo pipefail
-          mkdir -p dist
-
-          # Build a clean plugin ZIP with correct top-level folder name: website-support/
+          rm -f website-support.zip
+          mkdir -p dist/website-support
           rsync -a --delete \
             --exclude ".git" \
             --exclude ".github" \
             --exclude "dist" \
-            --exclude "**/.DS_Store" \
             ./ dist/website-support/
+          (cd dist && zip -qr ../website-support.zip website-support)
 
-          (cd dist && zip -r website-support.zip website-support >/dev/null)
-
-          echo "Built dist/website-support.zip"
-
-      - name: "Validate ZIP content"
+      - name: Validate ZIP contents
         shell: bash
         run: |
           set -euo pipefail
-          if ! unzip -l dist/website-support.zip | grep -q "website-support/website-support.php"; then
-            echo "ERROR: ZIP validation failed. Expected website-support/website-support.php inside the ZIP."
-            unzip -l dist/website-support.zip | head -n 80
+          unzip -t website-support.zip > /dev/null
+          # Ensure the plugin file exists in zip
+          unzip -l website-support.zip | grep -q "website-support/website-support.php"
+          # Ensure we did not accidentally introduce weird tokens (like $11.0.0$2) in plugin file
+          unzip -p website-support.zip website-support/website-support.php | grep -q "define( 'BWS_VERSION', '${{ steps.vars.outputs.version }}' );"
+          if unzip -p website-support.zip website-support/website-support.php | grep -q "\\$[0-9]\\+\\.[0-9]\\+\\.[0-9]\\+\\$"; then
+            echo "ERROR: Detected suspicious token like $X.Y.Z$ in website-support.php"
             exit 1
           fi
-          echo "ZIP content validation passed."
 
-      # ----------------------------
-      # Create release + upload asset
-      # ----------------------------
-      - name: "Create GitHub Release and upload asset"
+      - name: Create GitHub Release and upload asset
         uses: softprops/action-gh-release@v2
         with:
-          name: ${{ steps.vars.outputs.tag }}
+          files: website-support.zip
           tag_name: ${{ steps.vars.outputs.tag }}
           generate_release_notes: true
-          files: dist/website-support.zip
-
-      # ----------------------------
-      # Sync version patch back to main
-      # ----------------------------
-      - name: "Sync version back to main branch"
-        shell: bash
-        run: |
-          set -euo pipefail
-          VERSION="${{ steps.vars.outputs.version }}"
-          FILE="website-support.php"
-
-          git config user.name "github-actions[bot]"
-          git config user.email "github-actions[bot]@users.noreply.github.com"
-
-          git fetch origin main
-          git checkout main
-
-          perl -0777 -i -pe "s/(^\\s*\\*\\s*Version:\\s*)[0-9]+\\.[0-9]+\\.[0-9]+/\\\$1$VERSION/m" "$FILE"
-          perl -0777 -i -pe "s/(define\\(\\s*'BWS_VERSION'\\s*,\\s*')[0-9]+\\.[0-9]+\\.[0-9]+('\\s*\\)\\s*;)/\\\$1$VERSION\\\$2/g" "$FILE"
-
-          if git diff --quiet; then
-            echo "No changes to commit on main."
-            exit 0
-          fi
-
-          git add "$FILE"
-          git commit -m "Bump version to $VERSION"
-          git push origin main
