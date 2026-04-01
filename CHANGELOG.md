@@ -5,9 +5,6 @@ This project follows **Semantic Versioning** (MAJOR.MINOR.PATCH).
 Release tags are formatted as `vX.Y.Z`.
 
 ## [Unreleased]
-
-- Add optional setting to hide Venture/ThemeREX “New skins are available” dashboard notice.
-- Improve dashboard widget removal with a late-pass to catch widgets added after wp_dashboard_setup (e.g., Elementor).
 ### Added
 - TBD
 

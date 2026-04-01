@@ -13,7 +13,8 @@ class BWS_Settings {
 			'dashboard_remove_site_health'           => 1,
 			'dashboard_remove_welcome_panel'         => 0,
 			'dashboard_remove_custom_widget_ids'     => '',
-			'dashboard_hide_venture_skins_notice'   => 0,
+
+			'admin_notice_hide_selectors'           => '',
 
 			'updates_hide_nag'                       => 1,
 			'updates_hide_plugin_rows'               => 1,
@@ -117,7 +118,6 @@ public function get( $key, $default = null ) {
 			'dashboard_remove_at_a_glance',
 			'dashboard_remove_site_health',
 			'dashboard_remove_welcome_panel',
-			'dashboard_hide_venture_skins_notice',
 			'updates_hide_nag',
 			'updates_hide_plugin_rows',
 			'updates_hide_badges',
@@ -175,6 +175,7 @@ public function get( $key, $default = null ) {
 
 		$textarea_keys = [
 			'dashboard_remove_custom_widget_ids',
+			'admin_notice_hide_selectors',
 			'menu_hide_custom_slugs',
 			'submenu_hide_custom_slugs',
 			'label_cpt_map',
@@ -186,7 +187,27 @@ public function get( $key, $default = null ) {
 			$output[ $key ] = isset( $input[ $key ] ) ? sanitize_textarea_field( $input[ $key ] ) : ( $defaults[ $key ] ?? '' );
 		}
 
-		foreach ( [ 'label_posts', 'label_pages', 'label_media' ] as $key ) {
+		
+		// Extra hardening for admin notice selectors (avoid CSS injection)
+		if ( isset( $output['admin_notice_hide_selectors'] ) ) {
+			$lines = preg_split( '/\r\n|\r|\n/', (string) $output['admin_notice_hide_selectors'] );
+			$clean = [];
+			foreach ( (array) $lines as $line ) {
+				$line = trim( (string) $line );
+				if ( '' === $line ) {
+					continue;
+				}
+				// Remove characters that could break out of selector context
+				$line = str_replace( [ '{', '}', ';', '"', "'" ], '', $line );
+				$line = trim( preg_replace( '/\s+/', ' ', $line ) );
+				if ( '' !== $line ) {
+					$clean[] = $line;
+				}
+			}
+			$output['admin_notice_hide_selectors'] = implode( "\n", $clean );
+		}
+
+foreach ( [ 'label_posts', 'label_pages', 'label_media' ] as $key ) {
 			$output[ $key ] = isset( $input[ $key ] ) ? sanitize_text_field( $input[ $key ] ) : '';
 		}
 
@@ -277,10 +298,15 @@ public function get( $key, $default = null ) {
 				<p><?php $this->checkbox( 'dashboard_remove_activity', 'Remove Activity' ); ?></p>
 				<p><?php $this->checkbox( 'dashboard_remove_at_a_glance', 'Remove At a Glance' ); ?></p>
 				<p><?php $this->checkbox( 'dashboard_remove_site_health', 'Remove Site Health' ); ?></p>
-				<p><?php $this->checkbox( 'dashboard_remove_welcome_panel',
-			'dashboard_hide_venture_skins_notice', 'Remove Welcome Panel' ); ?></p>
-				<p><?php $this->textarea( 'dashboard_remove_custom_widget_ids', 'Custom Dashboard Widget IDs to Remove (one per line)', 4 ); ?></p>
-				<p><?php $this->checkbox( 'dashboard_hide_venture_skins_notice', 'Hide theme “New skins are available” notice (Venture/ThemeREX)' ); ?></p>
+				<p><?php $this->checkbox( 'dashboard_remove_welcome_panel', 'Remove Welcome Panel' ); ?></p>
+				<p><?php $this->textarea( 'dashboard_remove_custom_widget_ids',
+
+				<hr>
+				<h2><?php esc_html_e( 'Admin Notice Cleanup', BWS_TEXT_DOMAIN ); ?></h2>
+				<p><?php $this->textarea( 'admin_notice_hide_selectors', 'Admin Notice CSS Selectors to Hide (one per line)', 4 ); ?></p>
+				<p class="description"><?php echo esc_html__( 'Tip: To hide a specific notice, inspect it in your browser and copy a stable CSS selector (for example: .plugin-name-notice or .notice.notice-info).', BWS_TEXT_DOMAIN ); ?></p>
+
+			'admin_notice_hide_selectors', 'Custom Dashboard Widget IDs to Remove (one per line)', 4 ); ?></p>
 
 				<hr>
 				<h2><?php esc_html_e( 'Update UI Cleanup', BWS_TEXT_DOMAIN ); ?></h2>

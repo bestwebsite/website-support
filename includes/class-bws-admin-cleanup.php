@@ -76,7 +76,15 @@ class BWS_Admin_Cleanup {
 			$selectors[] = '#menu-dashboard .wp-submenu a[href="update-core.php"]';
 		}
 
-		if ( ! empty( $selectors ) ) {
+		
+		// Custom admin notice selectors (one per line in settings)
+		$custom_notice_selectors = preg_split( '/\r\n|\r|\n/', (string) $this->settings->get( 'admin_notice_hide_selectors', '' ) );
+		$custom_notice_selectors = array_filter( array_map( 'trim', (array) $custom_notice_selectors ) );
+		if ( ! empty( $custom_notice_selectors ) ) {
+			$selectors = array_merge( $selectors, $custom_notice_selectors );
+		}
+
+if ( ! empty( $selectors ) ) {
 			echo '<style>' . esc_html( implode( ',', array_unique( $selectors ) ) ) . '{display:none!important;}</style>';
 		}
 	}

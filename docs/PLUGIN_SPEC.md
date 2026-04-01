@@ -82,7 +82,13 @@ All settings are stored in a single options array: `bw_support_settings`.
 - ⬜ Remove Welcome panel (default OFF)
 - Custom dashboard widget IDs to remove (textarea; default empty)
 
-### Update UI Cleanup (default ON)
+#
+### Admin Notice Cleanup (selectors)
+- Setting: `admin_notice_hide_selectors` (textarea, one CSS selector per line)
+- Purpose: Hide annoying theme/plugin admin notices without hard-coding vendor-specific logic.
+- Notes: Use browser inspector to copy a stable selector for the notice wrapper.
+
+## Update UI Cleanup (default ON)
 - ✅ Hide update nag
 - ✅ Hide plugin update rows/messages
 - ✅ Hide update badges/counts
@@ -230,8 +236,3 @@ When preparing a new release:
 
 5. After release:
    - Verify updates appear in WordPress/WP remote on a pilot site.
-
-
-## Dashboard Notices
-
-- `dashboard_hide_venture_skins_notice` (0/1): When enabled, hides the Venture/ThemeREX “New skins are available” admin notice on the Dashboard.
