@@ -17,13 +17,20 @@ Release tags are formatted as `vX.Y.Z`.
 ---
 
 ## [1.0.2] - 2026-04-01
+### Added
+- Admin Notice cleanup: optional “Admin Notice CSS Selectors to Hide” setting (one selector per line) for theme/plugin notices.
+- Release workflow preflight checks (PHP lint + ZIP structure validation) before publishing a release asset.
+- Release workflow guard to detect corrupted version patch artifacts in `website-support.php` (prevents parse errors like `$11.0.0$2` from shipping).
+
 ### Changed
-- Hardened plugin bootstrap so admin-only features are only initialized in wp-admin (prevents front-end crashes from admin UI code).
-- Added optional “Admin Notice CSS Selectors to Hide” setting (one selector per line) for theme/plugin notices.
+- Hardened plugin bootstrap so admin-only features are initialized only in wp-admin (prevents front-end crashes from admin UI code).
+- Release version patching is now performed safely (no fragile regex backreferences) so plugin header + `BWS_VERSION` are updated cleanly from the tag.
+- Release packaging now builds a deterministic `website-support.zip` with correct folder structure (`website-support/…`) and excludes repo-only files.
 
 ### Fixed
 - Added a late dashboard widget cleanup pass to remove widgets registered after `wp_dashboard_setup` (e.g., some Elementor/third-party widgets).
 - Improved safety around custom CSS selector handling (sanitization + limits) to avoid breaking admin output.
+- Prevented site-wide “critical error” outages caused by corrupted `website-support.php` produced during release packaging/version patching.
 
 ---
 
