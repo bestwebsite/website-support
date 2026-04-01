@@ -16,6 +16,18 @@ Release tags are formatted as `vX.Y.Z`.
 
 ---
 
+## [1.0.1] - 2026-04-01
+### Added
+- Admin Notice cleanup: **Admin Notice CSS Selectors to Hide** (one CSS selector per line) to hide theme/plugin admin notices without hard-coding per-theme rules.
+
+### Changed
+- Dashboard widget removal now performs a **late removal pass on the Dashboard screen** to catch widgets added after `wp_dashboard_setup` (notably Elementor’s “Accessibility” dashboard widget).
+
+### Fixed
+- Release workflow: version patching no longer risks corrupting plugin PHP files during release packaging (prevents parse errors like `$11.0.0$2` in `website-support.php`).
+
+---
+
 ## [1.0.0] - 2026-03-06
 ### Added
 - Dashboard cleanup options (Quick Draft, Events/News, Activity, At a Glance, Site Health; optional Welcome panel).
