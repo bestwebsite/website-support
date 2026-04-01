@@ -230,3 +230,8 @@ When preparing a new release:
 
 5. After release:
    - Verify updates appear in WordPress/WP remote on a pilot site.
+
+
+## Dashboard Notices
+
+- `dashboard_hide_venture_skins_notice` (0/1): When enabled, hides the Venture/ThemeREX “New skins are available” admin notice on the Dashboard.

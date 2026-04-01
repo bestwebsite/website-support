@@ -13,6 +13,7 @@ class BWS_Settings {
 			'dashboard_remove_site_health'           => 1,
 			'dashboard_remove_welcome_panel'         => 0,
 			'dashboard_remove_custom_widget_ids'     => '',
+			'dashboard_hide_venture_skins_notice'   => 0,
 
 			'updates_hide_nag'                       => 1,
 			'updates_hide_plugin_rows'               => 1,
@@ -116,6 +117,7 @@ public function get( $key, $default = null ) {
 			'dashboard_remove_at_a_glance',
 			'dashboard_remove_site_health',
 			'dashboard_remove_welcome_panel',
+			'dashboard_hide_venture_skins_notice',
 			'updates_hide_nag',
 			'updates_hide_plugin_rows',
 			'updates_hide_badges',
@@ -275,8 +277,10 @@ public function get( $key, $default = null ) {
 				<p><?php $this->checkbox( 'dashboard_remove_activity', 'Remove Activity' ); ?></p>
 				<p><?php $this->checkbox( 'dashboard_remove_at_a_glance', 'Remove At a Glance' ); ?></p>
 				<p><?php $this->checkbox( 'dashboard_remove_site_health', 'Remove Site Health' ); ?></p>
-				<p><?php $this->checkbox( 'dashboard_remove_welcome_panel', 'Remove Welcome Panel' ); ?></p>
+				<p><?php $this->checkbox( 'dashboard_remove_welcome_panel',
+			'dashboard_hide_venture_skins_notice', 'Remove Welcome Panel' ); ?></p>
 				<p><?php $this->textarea( 'dashboard_remove_custom_widget_ids', 'Custom Dashboard Widget IDs to Remove (one per line)', 4 ); ?></p>
+				<p><?php $this->checkbox( 'dashboard_hide_venture_skins_notice', 'Hide theme “New skins are available” notice (Venture/ThemeREX)' ); ?></p>
 
 				<hr>
 				<h2><?php esc_html_e( 'Update UI Cleanup', BWS_TEXT_DOMAIN ); ?></h2>
