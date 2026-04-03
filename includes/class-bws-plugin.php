@@ -48,6 +48,7 @@ class BWS_Plugin {
 
 		add_action( 'admin_init', [ $this->settings, 'register_settings' ] );
 		add_action( 'admin_menu', [ $this->settings, 'register_settings_page' ], 999 );
+		add_action( 'admin_enqueue_scripts', [ $this->settings, 'enqueue_admin_assets' ] );
 	}
 
 	/** Convenience accessor for other classes. */
