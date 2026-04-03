@@ -16,30 +16,6 @@ Release tags are formatted as `vX.Y.Z`.
 
 ---
 
-## [1.0.4] - 2026-04-02
-### Fixed
-- Prevented site “critical error” crashes caused by invalid WordPress hook callbacks.
-  - Restored missing callback methods that were being registered on `admin_head` / `admin_head-index.php`.
-  - Ensured admin-only CSS output for “Admin Notice CSS Selectors to Hide” runs safely and does not break wp-admin rendering.
-  - Ensured the late dashboard widget cleanup pass exists and runs without triggering fatal errors.
-
- ---
-
-## [1.0.3] - 2026-04-02
-### Added
-- Modernized Settings UI: tabbed navigation for major sections (Dashboard, Updates, Restrictions, Labels, Branding, Support, Login, White-Label).
-- Settings page styling improvements (card layout + spacing + typography) for a cleaner, more professional admin experience.
-- Sticky “Save Settings” bar on the settings screen to reduce missed saves on long pages.
-
-### Changed
-- Refactored settings page rendering to support the new tabbed layout while keeping existing settings keys and behavior unchanged.
-- Enqueued admin CSS only on the plugin settings screen to avoid impacting other wp-admin pages.
-
-### Fixed
-- Reduced visual clutter and improved readability on the settings page (consistent alignment, grouping, and labels).
-
----
-
 ## [1.0.2] - 2026-04-01
 ### Added
 - Admin Notice cleanup: optional “Admin Notice CSS Selectors to Hide” setting (one selector per line) for theme/plugin notices.

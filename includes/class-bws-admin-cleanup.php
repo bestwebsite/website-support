@@ -21,6 +21,45 @@ class BWS_Admin_Cleanup {
 		}
 	}
 
+	
+	private function get_notice_hide_selectors() {
+		$raw = (string) $this->settings->get( 'admin_notice_hide_selectors', '' );
+		if ( '' === trim( $raw ) ) {
+			return [];
+		}
+
+		$lines = preg_split( '/\r\n|\r|\n/', $raw );
+		$lines = array_slice( (array) $lines, 0, 50 );
+		$out   = [];
+
+		foreach ( $lines as $line ) {
+			$line = trim( (string) $line );
+			if ( '' === $line ) {
+				continue;
+			}
+
+			// Allow a shorthand: "class1 class2" -> ".class1.class2" (useful when copying class attributes).
+			if ( false !== strpos( $line, ' ' ) && false === strpbrk( $line, '.#[:>,' ) ) {
+				$parts = preg_split( '/\s+/', $line );
+				$parts = array_filter( array_map( 'sanitize_key', (array) $parts ) );
+				if ( ! empty( $parts ) ) {
+					$line = '.' . implode( '.', $parts );
+				}
+			}
+
+			// Basic allowlist to prevent breaking wp-admin output.
+			$line = preg_replace( '/[^A-Za-z0-9\s\#\.\-\_\>\:\[\]\=\"\'\(\)\,]/', '', $line );
+			$line = trim( preg_replace( '/\s+/', ' ', $line ) );
+			if ( '' === $line ) {
+				continue;
+			}
+
+			$out[] = $line;
+		}
+
+		return array_values( array_unique( $out ) );
+	}
+
 	public function admin_head_cleanup() {
 		if ( ! is_admin() ) {
 			return;
