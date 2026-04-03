@@ -16,7 +16,7 @@ Release tags are formatted as `vX.Y.Z`.
 
 ---
 
-## [1.0.3] - 2026-04-01
+## [1.0.3] - 2026-04-02
 ### Added
 - Modernized Settings UI: tabbed navigation for major sections (Dashboard, Updates, Restrictions, Labels, Branding, Support, Login, White-Label).
 - Settings page styling improvements (card layout + spacing + typography) for a cleaner, more professional admin experience.
