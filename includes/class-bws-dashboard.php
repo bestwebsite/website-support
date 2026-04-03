@@ -45,4 +45,38 @@ class BWS_Dashboard {
 			remove_action( 'welcome_panel', 'wp_welcome_panel' );
 		}
 	}
+
+	/**
+	 * Some plugins register dashboard widgets late. Do a second pass to remove any
+	 * widgets that appear after wp_dashboard_setup, based on our configured IDs.
+	 */
+	public function late_cleanup_dashboard_widgets() {
+		if ( ! is_admin() || ! current_user_can( 'read' ) ) {
+			return;
+		}
+		$screen = function_exists( 'get_current_screen' ) ? get_current_screen() : null;
+		if ( ! $screen || 'dashboard' !== (string) $screen->id ) {
+			return;
+		}
+
+		$ids_raw = (string) $this->settings->get( 'dashboard_remove_custom_widget_ids', '' );
+		$ids = preg_split( '/\r\n|\r|\n/', $ids_raw );
+		$ids = array_values( array_filter( array_map( 'trim', (array) $ids ) ) );
+
+		if ( empty( $ids ) ) {
+			return;
+		}
+
+		$contexts = [ 'normal', 'side', 'column3', 'column4' ];
+		foreach ( $ids as $id ) {
+			$id = sanitize_key( $id );
+			if ( '' === $id ) {
+				continue;
+			}
+			foreach ( $contexts as $context ) {
+				remove_meta_box( $id, 'dashboard', $context );
+			}
+		}
+	}
+
 }
