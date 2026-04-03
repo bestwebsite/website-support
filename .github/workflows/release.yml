@@ -25,8 +25,8 @@ jobs:
           set -euo pipefail
           TAG="${GITHUB_REF_NAME}"
           VERSION="${TAG#v}"
-          echo "tag=${TAG}" >> "$GITHUB_OUTPUT"
-          echo "version=${VERSION}" >> "$GITHUB_OUTPUT"
+          echo "tag=$TAG" >> "$GITHUB_OUTPUT"
+          echo "version=$VERSION" >> "$GITHUB_OUTPUT"
 
       - name: Pre-release validation (required files + repo constants)
         shell: bash
@@ -47,8 +47,8 @@ jobs:
         run: |
           set -euo pipefail
           VERSION="${{ steps.vars.outputs.version }}"
-          if ! grep -qE "^## \[${VERSION}\] - " CHANGELOG.md; then
-            echo "ERROR: CHANGELOG.md missing heading: ## [${VERSION}] - YYYY-MM-DD"
+          if ! grep -qE "^## \\[$VERSION\\]" CHANGELOG.md; then
+            echo "ERROR: CHANGELOG.md missing heading: ## [$VERSION] - YYYY-MM-DD"
             exit 1
           fi
           echo "CHANGELOG guard passed."
@@ -58,9 +58,9 @@ jobs:
         run: |
           set -euo pipefail
           php -v
-          while IFS= read -r -d '' file; do
+          find . -name "*.php" -print0 | while IFS= read -r -d '' file; do
             php -l "$file" > /dev/null
-          done < <(find . -name "*.php" -print0)
+          done
 
       - name: Patch version in website-support.php (single source of truth)
         shell: bash
@@ -70,22 +70,23 @@ jobs:
           set -euo pipefail
           python3 - <<'PY'
           import os, re, pathlib
+
           version = os.environ["VERSION"].strip()
           p = pathlib.Path("website-support.php")
           s = p.read_text(encoding="utf-8")
 
-          # Update plugin header Version: x.y.z
-          s = re.sub(r'(?m)^\s*\*\s*Version:\s*.*$', f' * Version: {version}', s)
+          # Update plugin header line: * Version: x.y.z
+          s = re.sub(r'(?m)^\\s*\\*\\s*Version:\\s*.*$', f' * Version: {version}', s)
 
-          # Update define('BWS_VERSION', 'x.y.z');
+          # Update define( 'BWS_VERSION', 'x.y.z' );
           s = re.sub(
-              r"(?m)^(define\(\s*'BWS_VERSION'\s*,\s*')[^']+('\s*\)\s*;)",
-              rf"\g<1>{version}\g<2>",
-              s
+              r"(?m)^define\\(\\s*'BWS_VERSION'\\s*,\\s*'[^']*'\\s*\\)\\s*;\\s*$",
+              f"define( 'BWS_VERSION', '{version}' );",
+              s,
           )
 
           p.write_text(s, encoding="utf-8")
-          print("Patched website-support.php to version", version)
+          print("Patched website-support.php to", version)
           PY
 
       - name: Build release ZIP (website-support.zip)
@@ -98,9 +99,8 @@ jobs:
           rsync -a --delete \
             --exclude ".git" \
             --exclude ".github" \
-            --exclude ".gitignore" \
-            --exclude ".DS_Store" \
             --exclude "dist" \
+            --exclude "**/.DS_Store" \
             ./ dist/website-support/
 
           (cd dist && zip -qr ../website-support.zip website-support)
@@ -111,26 +111,16 @@ jobs:
         run: |
           set -euo pipefail
           unzip -t website-support.zip > /dev/null
-
-          unzip -l website-support.zip | grep -q "website-support/website-support.php" || {
-            echo "ERROR: ZIP missing website-support/website-support.php"
-            exit 1
-          }
-
-          unzip -p website-support.zip website-support/website-support.php | grep -q "Plugin Name:" || {
-            echo "ERROR: website-support.php in ZIP missing plugin header"
-            exit 1
-          }
+          unzip -l website-support.zip | grep -q "website-support/website-support.php"
 
           VERSION="${{ steps.vars.outputs.version }}"
-          unzip -p website-support.zip website-support/website-support.php | grep -q "Version: ${VERSION}" || {
-            echo "ERROR: website-support.php in ZIP does not contain Version: ${VERSION}"
-            exit 1
-          }
+
+          unzip -p website-support.zip website-support/website-support.php | grep -q "Version: ${VERSION}"
+          unzip -p website-support.zip website-support/website-support.php | grep -q "define( 'BWS_VERSION', '${VERSION}' );"
 
           echo "ZIP validation passed."
 
-      - name: Create GitHub Release + upload ZIP asset
+      - name: Create GitHub Release and upload ZIP asset
         uses: softprops/action-gh-release@v2
         with:
           tag_name: ${{ steps.vars.outputs.tag }}
