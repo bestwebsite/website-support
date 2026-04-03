@@ -16,6 +16,41 @@ Release tags are formatted as `vX.Y.Z`.
 
 ---
 
+## [1.0.5] - 2026-04-02
+### Added
+- Guardrails / drift documentation to reduce regressions during refactors and ensure required files, hooks, and settings keys remain consistent between releases.
+- Restored visibility of the “Admin Notice CSS Selectors to Hide” capability in the updated settings UI so site admins can hide theme/plugin notice banners by selector (one per line).
+
+### Changed
+- Settings UI wiring was updated to ensure the notice-selector field is saved and read from its dedicated option key (instead of being inadvertently coupled to other textarea fields during the settings UI refactor).
+
+### Fixed
+- Prevented admin-notice selector settings from being dropped/hidden after the settings UI modernization work (so notice hiding is available again and behaves predictably).
+
+---
+
+## [1.0.4] - 2026-04-02
+### Fixed
+- Resolved a critical-error crash introduced during the settings UI refactor where required methods were missing / not present in the loaded class set on some installs.
+- Hardened initialization so missing class methods cannot take down wp-admin (fail-safe behavior rather than fatal error).
+
+---
+
+## [1.0.3] - 2026-04-02
+### Added
+- Modernized Settings UI: tabbed navigation for major sections (Dashboard, Updates, Restrictions, Labels, Branding, Support, Login, White-Label).
+- Settings page styling improvements (card layout + spacing + typography) for a cleaner, more professional admin experience.
+- Sticky “Save Settings” bar on the settings screen to reduce missed saves on long pages.
+
+### Changed
+- Refactored settings page rendering to support the new tabbed layout while keeping existing settings keys and behavior unchanged.
+- Enqueued admin CSS only on the plugin settings screen to avoid impacting other wp-admin pages.
+
+### Fixed
+- Reduced visual clutter and improved readability on the settings page (consistent alignment, grouping, and labels).
+
+---
+
 ## [1.0.2] - 2026-04-01
 ### Added
 - Admin Notice cleanup: optional “Admin Notice CSS Selectors to Hide” setting (one selector per line) for theme/plugin notices.
@@ -36,7 +71,10 @@ Release tags are formatted as `vX.Y.Z`.
 
 ## [1.0.1] - 2026-03-?? 
 ### Changed
-- UI polish and admin cleanup improvements.
+- General UI polish and admin cleanup improvements.
+
+### Fixed
+- Stabilized several “hide/redirect” admin restrictions so they behave consistently across wp-admin entry points (buttons + menu links).
 
 ---
 
