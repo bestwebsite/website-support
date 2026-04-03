@@ -16,6 +16,15 @@ Release tags are formatted as `vX.Y.Z`.
 
 ---
 
+## [1.0.4] - 2026-04-02
+### Fixed
+- Prevented site “critical error” crashes caused by invalid WordPress hook callbacks.
+  - Restored missing callback methods that were being registered on `admin_head` / `admin_head-index.php`.
+  - Ensured admin-only CSS output for “Admin Notice CSS Selectors to Hide” runs safely and does not break wp-admin rendering.
+  - Ensured the late dashboard widget cleanup pass exists and runs without triggering fatal errors.
+
+ ---
+
 ## [1.0.3] - 2026-04-02
 ### Added
 - Modernized Settings UI: tabbed navigation for major sections (Dashboard, Updates, Restrictions, Labels, Branding, Support, Login, White-Label).
