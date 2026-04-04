@@ -16,7 +16,7 @@ Release tags are formatted as `vX.Y.Z`.
 
 ---
 
-## [1.0.5] - 2026-04-02
+## [1.0.5] - 2026-04-04
 ### Added
 - Guardrails / drift documentation to reduce regressions during refactors and ensure required files, hooks, and settings keys remain consistent between releases.
 - Restored visibility of the “Admin Notice CSS Selectors to Hide” capability in the updated settings UI so site admins can hide theme/plugin notice banners by selector (one per line).
@@ -26,6 +26,7 @@ Release tags are formatted as `vX.Y.Z`.
 
 ### Fixed
 - Prevented admin-notice selector settings from being dropped/hidden after the settings UI modernization work (so notice hiding is available again and behaves predictably).
+- Fixed fatal error: add missing admin notice CSS output method
 
 ---
 
