@@ -18,78 +18,61 @@ Release tags are formatted as `vX.Y.Z`.
 
 ## [1.0.6] - 2026-04-04
 ### Added
-- Dashboard cleanup: added optional checkbox to remove WP Mail SMTP widget (`wp_mail_smtp_reports_widget_lite`).
-- Elementor-aware dashboard cleanup checkboxes (only shown when Elementor is active): remove “Elementor Overview” (`e-dashboard-overview`) and “Elementor Accessibility” (`e-dashboard-ally`).
-- Moved “Admin Notice CSS Selectors to Hide” setting to the Dashboard tab for better organization.
+- New **Hardening & Performance** settings tab with practical security/performance toggles:
+  - Force SSL for wp-admin (auto-enables only when the site home URL uses HTTPS).
+  - Disable XML-RPC pingbacks.
+  - Disable Application Passwords.
+  - Block author enumeration (`?author=`).
+  - Remove generator/version output.
+  - Disable emojis, oEmbed discovery, and Dashicons for visitors.
+  - Limit post revisions (default: 10; configurable).
+  - Disable attachment pages (redirect to media file) for SEO hygiene.
+  - Disable comments site-wide (with optional comment feed disable).
+- Dashboard Cleanup:
+  - Checkbox to remove **WP Mail SMTP** dashboard widget (`wp_mail_smtp_reports_widget_lite`).
+  - Elementor-aware checkboxes (only shown when Elementor is active) to remove:
+    - Elementor Overview (`e-dashboard-overview`)
+    - Elementor Accessibility (`e-dashboard-ally`)
+- Support:
+  - Optional “Force outgoing From email to site domain” toggle (skips overrides when WP Mail SMTP is active).
+
+### Changed
+- Settings UI: reorganized Dashboard tab to include **Admin Notice CSS Selectors to Hide** alongside custom dashboard widget IDs.
+- Admin notice selector handling now supports either full CSS selectors or space-delimited class lists (auto-normalized to `.class1.class2...`).
 
 ### Fixed
-- Fixed a critical settings issue where saving on one tab would wipe/clear settings from other tabs by making settings sanitization tab-aware and merging with existing saved options.
+- Restored a clean, deterministic plugin bootstrap file (prevents corrupted release artifacts from taking sites down).
+- Improved dashboard widget removal coverage across additional contexts (`advanced`, `column3`, `column4`) for better compatibility with third-party widgets.
 
 ---
 
-## [1.0.5] - 2026-04-04
+# Changelog
+All notable changes to **Best Website Support** will be documented in this file.
+
+This project follows **Semantic Versioning** (MAJOR.MINOR.PATCH).  
+Release tags are formatted as `vX.Y.Z`.
+
+## [Unreleased]
 ### Added
-- Guardrails / drift documentation to reduce regressions during refactors and ensure required files, hooks, and settings keys remain consistent between releases.
-- Restored visibility of the “Admin Notice CSS Selectors to Hide” capability in the updated settings UI so site admins can hide theme/plugin notice banners by selector (one per line).
+- TBD
 
 ### Changed
-- Settings UI wiring was updated to ensure the notice-selector field is saved and read from its dedicated option key (instead of being inadvertently coupled to other textarea fields during the settings UI refactor).
+- TBD
 
 ### Fixed
-- Prevented admin-notice selector settings from being dropped/hidden after the settings UI modernization work (so notice hiding is available again and behaves predictably).
-- Fixed fatal error: add missing admin notice CSS output method
-- Fixed: restore missing methods referenced by hooks (branding + dashboard)
-- Restored tabbed Settings UI (nav tabs + panels + settings-screen JS)
-- Fixed: settings save controls + notice selector handling + Elementor dashboard removal
+- TBD
 
 ---
 
-## [1.0.4] - 2026-04-02
-### Fixed
-- Resolved a critical-error crash introduced during the settings UI refactor where required methods were missing / not present in the loaded class set on some installs.
-- Hardened initialization so missing class methods cannot take down wp-admin (fail-safe behavior rather than fatal error).
-
----
-
-## [1.0.3] - 2026-04-02
+## [1.0.1] - 2026-04-01
 ### Added
-- Modernized Settings UI: tabbed navigation for major sections (Dashboard, Updates, Restrictions, Labels, Branding, Support, Login, White-Label).
-- Settings page styling improvements (card layout + spacing + typography) for a cleaner, more professional admin experience.
-- Sticky “Save Settings” bar on the settings screen to reduce missed saves on long pages.
+- Admin Notice cleanup: **Admin Notice CSS Selectors to Hide** (one CSS selector per line) to hide theme/plugin admin notices without hard-coding per-theme rules.
 
 ### Changed
-- Refactored settings page rendering to support the new tabbed layout while keeping existing settings keys and behavior unchanged.
-- Enqueued admin CSS only on the plugin settings screen to avoid impacting other wp-admin pages.
+- Dashboard widget removal now performs a **late removal pass on the Dashboard screen** to catch widgets added after `wp_dashboard_setup` (notably Elementor’s “Accessibility” dashboard widget).
 
 ### Fixed
-- Reduced visual clutter and improved readability on the settings page (consistent alignment, grouping, and labels).
-
----
-
-## [1.0.2] - 2026-04-01
-### Added
-- Admin Notice cleanup: optional “Admin Notice CSS Selectors to Hide” setting (one selector per line) for theme/plugin notices.
-- Release workflow preflight checks (PHP lint + ZIP structure validation) before publishing a release asset.
-- Release workflow guard to detect corrupted version patch artifacts in `website-support.php` (prevents parse errors like `$11.0.0$2` from shipping).
-
-### Changed
-- Hardened plugin bootstrap so admin-only features are initialized only in wp-admin (prevents front-end crashes from admin UI code).
-- Release version patching is now performed safely (no fragile regex backreferences) so plugin header + `BWS_VERSION` are updated cleanly from the tag.
-- Release packaging now builds a deterministic `website-support.zip` with correct folder structure (`website-support/…`) and excludes repo-only files.
-
-### Fixed
-- Added a late dashboard widget cleanup pass to remove widgets registered after `wp_dashboard_setup` (e.g., some Elementor/third-party widgets).
-- Improved safety around custom CSS selector handling (sanitization + limits) to avoid breaking admin output.
-- Prevented site-wide “critical error” outages caused by corrupted `website-support.php` produced during release packaging/version patching.
-
----
-
-## [1.0.1] - 2026-03-?? 
-### Changed
-- General UI polish and admin cleanup improvements.
-
-### Fixed
-- Stabilized several “hide/redirect” admin restrictions so they behave consistently across wp-admin entry points (buttons + menu links).
+- Release workflow: version patching no longer risks corrupting plugin PHP files during release packaging (prevents parse errors like `$11.0.0$2` in `website-support.php`).
 
 ---
 
@@ -113,3 +96,9 @@ Release tags are formatted as `vX.Y.Z`.
 - GitHub Releases–based updates:
   - GitHub Action to build and publish release ZIP on tag (`vX.Y.Z`).
   - Plugin updater checks GitHub Releases API, prefers ZIP asset, falls back to `zipball_url`.
+
+### Changed
+- N/A
+
+### Fixed
+- N/A

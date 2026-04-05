@@ -4,28 +4,31 @@ if ( ! defined( 'ABSPATH' ) ) {
 }
 
 class BWS_Settings {
+
 	public function get_defaults() {
 		return [
+			// Dashboard
 			'dashboard_remove_quick_draft'           => 1,
 			'dashboard_remove_events_news'           => 1,
 			'dashboard_remove_activity'              => 1,
 			'dashboard_remove_at_a_glance'           => 1,
 			'dashboard_remove_site_health'           => 1,
 			'dashboard_remove_welcome_panel'         => 0,
-			'dashboard_remove_wp_mail_smtp_reports_widget_lite' => 0,
-			'dashboard_remove_elementor_overview' => 0,
-			'dashboard_remove_elementor_ally' => 0,
+			'dashboard_remove_wp_mail_smtp_widget'   => 1,
+			'dashboard_remove_elementor_overview'    => 1,
+			'dashboard_remove_elementor_ally'        => 1,
 			'dashboard_remove_custom_widget_ids'     => '',
+			'admin_notice_hide_selectors'            => '',
 
-			'admin_notice_hide_selectors'           => '',
-
+			// Updates
 			'updates_hide_nag'                       => 1,
 			'updates_hide_plugin_rows'               => 1,
 			'updates_hide_badges'                    => 1,
-			'updates_hide_auto_update_column'        => 1,
+			'updates_hide_auto_update_column'        => 1, // also disables auto-updates via filters in admin cleanup
 			'updates_hide_plugin_update_tab'         => 1,
 			'restrict_updates_page'                  => 1,
 
+			// Restrictions / menus
 			'restrict_plugin_editor'                 => 1,
 			'restrict_theme_editor'                  => 1,
 			'restrict_plugin_install'                => 1,
@@ -38,15 +41,16 @@ class BWS_Settings {
 			'menu_hide_users'                        => 0,
 			'menu_hide_plugins'                      => 0,
 			'menu_hide_appearance'                   => 0,
-
 			'menu_hide_custom_slugs'                 => '',
 			'submenu_hide_custom_slugs'              => '',
 
+			// Labels
 			'label_posts'                            => '',
 			'label_pages'                            => '',
 			'label_media'                            => '',
 			'label_cpt_map'                          => "# Format: post_type|Menu Label|Add New Label\n# Example: event-item|Events|Add New Event",
 
+			// Branding
 			'branding_footer_enabled'                => 1,
 			'branding_footer_text'                   => 'Managed by Best Website • support@bestwebsite.com',
 			'branding_footer_version_text'           => '',
@@ -54,6 +58,7 @@ class BWS_Settings {
 			'branding_support_widget_intro'          => 'Managed Website Support by Best Website',
 			'branding_support_page_intro'            => 'Use this form to contact Best Website for support, changes, or questions about your website.',
 
+			// Support
 			'support_widget_enabled'                 => 1,
 			'support_page_enabled'                   => 1,
 			'support_page_label'                     => 'Website Support',
@@ -62,7 +67,9 @@ class BWS_Settings {
 			'support_success_message'                => 'Thanks! Your message has been sent to Best Website Support.',
 			'support_instructions_text'              => 'Please share as much detail as possible, including page URLs and what you expected to happen.',
 			'support_include_diagnostics'            => 1,
+			'support_force_from_domain'              => 0, // optional; skipped if WP Mail SMTP active
 
+			// Login
 			'login_branding_enabled'                 => 1,
 			'login_logo_url'                         => '',
 			'login_logo_link_url'                    => home_url( '/' ),
@@ -71,11 +78,30 @@ class BWS_Settings {
 			'login_button_color'                     => '#2271b1',
 			'login_help_text'                        => 'Website managed by Best Website • support@bestwebsite.com',
 
+			// White-label
 			'plugin_whitelabel_enabled'              => 1,
-			'plugin_show_settings_menu'              => 0,
+			'plugin_hide_settings_menu'              => 0,
 			'plugin_hide_from_plugins_list'          => 0,
 			'plugin_hide_plugin_ui_badges'           => 0,
 			'plugin_hide_support_menu_from_adminbar' => 0,
+
+			// Hardening & Performance
+			'comments_disable_sitewide'              => 1,
+			'comments_disable_feeds'                 => 0,
+
+			'security_disable_xmlrpc_pingbacks'      => 1,
+			'security_disable_application_passwords' => 1,
+			'security_block_author_enum'             => 1,
+			'security_remove_generator'              => 1,
+			'security_force_ssl_admin'               => 1,
+
+			'perf_disable_emojis'                    => 1,
+			'perf_disable_oembed'                    => 1,
+			'perf_disable_dashicons_visitors'        => 1,
+			'perf_limit_revisions_enabled'           => 1,
+			'perf_limit_revisions_count'             => 10,
+
+			'seo_disable_attachment_pages'           => 1,
 		];
 	}
 
@@ -105,169 +131,140 @@ class BWS_Settings {
 	}
 
 	public function sanitize_settings( $input ) {
-	$input = is_array( $input ) ? $input : [];
+		$defaults = $this->get_defaults();
+		$input    = is_array( $input ) ? $input : [];
+		$output   = [];
 
-	// Identify which tab was submitted so we only update fields from that tab.
-	$active_tab = isset( $input['bws_active_tab'] ) ? sanitize_key( (string) $input['bws_active_tab'] ) : 'dashboard';
+		$checkbox_keys = [
+			'dashboard_remove_quick_draft',
+			'dashboard_remove_events_news',
+			'dashboard_remove_activity',
+			'dashboard_remove_at_a_glance',
+			'dashboard_remove_site_health',
+			'dashboard_remove_welcome_panel',
+			'dashboard_remove_wp_mail_smtp_widget',
+			'dashboard_remove_elementor_overview',
+			'dashboard_remove_elementor_ally',
 
-	// Load existing saved settings so saving one tab doesn't wipe other tabs.
-	$existing = get_option( BWS_OPTION_KEY, [] );
-	$existing = is_array( $existing ) ? $existing : [];
+			'updates_hide_nag',
+			'updates_hide_plugin_rows',
+			'updates_hide_badges',
+			'updates_hide_auto_update_column',
+			'updates_hide_plugin_update_tab',
+			'restrict_updates_page',
 
-	// Never persist this helper value.
-	unset( $input['bws_active_tab'] );
+			'restrict_plugin_editor',
+			'restrict_theme_editor',
+			'restrict_plugin_install',
+			'restrict_plugin_delete',
+			'restrict_theme_install',
+			'restrict_theme_switch',
+			'menu_hide_tools',
+			'menu_hide_comments',
+			'menu_hide_settings',
+			'menu_hide_users',
+			'menu_hide_plugins',
+			'menu_hide_appearance',
 
-	$tab_fields = [
-		'dashboard' => [
-			'checkbox' => [
-				'dashboard_remove_quick_draft',
-				'dashboard_remove_wordpress_events_news',
-				'dashboard_remove_activity',
-				'dashboard_remove_at_a_glance',
-				'dashboard_remove_site_health',
-				'dashboard_remove_welcome_panel',
-				'dashboard_remove_wp_mail_smtp_reports_widget_lite',
-				'dashboard_remove_elementor_overview',
-				'dashboard_remove_elementor_ally',
-			],
-			'textareas' => [
-				'dashboard_remove_custom_widget_ids',
-				'admin_notice_hide_selectors',
-			],
-		],
-		'updates' => [
-			'checkbox' => [
-				'updates_hide_update_nag',
-				'updates_hide_plugin_update_rows',
-				'updates_hide_update_badges_counts',
-				'updates_hide_plugin_auto_update_column_links',
-				'updates_hide_plugins_update_available_tab',
-				'updates_hide_redirect_updates_screen',
-			],
-		],
-		'restrictions' => [
-			'checkbox' => [
-				'restrictions_hide_plugin_editor',
-				'restrictions_hide_theme_editor',
-				'restrictions_hide_plugin_add_new_upload',
-				'restrictions_hide_plugin_delete_links',
-				'restrictions_hide_theme_add_new_upload',
-				'restrictions_hide_theme_switching_theme_pages',
-				'restrictions_hide_updates_screen',
-				'restrictions_hide_tools_menu',
-				'restrictions_hide_comments_menu',
-				'restrictions_hide_settings_menu',
-				'restrictions_hide_users_menu',
-				'restrictions_hide_plugins_menu',
-				'restrictions_hide_appearance_menu',
-			],
-			'textareas' => [
-				'restrictions_hide_top_level_menu_slugs',
-				'restrictions_hide_submenu_slugs',
-			],
-		],
-		'labels' => [
-			'texts' => [
-				'labels_rename_posts',
-				'labels_rename_pages',
-				'labels_rename_media',
-			],
-			'textareas' => [
-				'labels_cpt_menu_overrides',
-			],
-		],
-		'branding' => [
-			'checkbox' => [
-				'branding_enable_admin_footer_text',
-			],
-			'texts' => [
-				'branding_admin_footer_text',
-				'branding_admin_footer_version_text',
-				'branding_support_logo_url',
-				'branding_support_widget_intro_text',
-				'branding_support_page_intro_text',
-			],
-		],
-		'support' => [
-			'checkbox' => [
-				'support_enable_dashboard_widget',
-				'support_enable_support_sidebar_page',
-				'support_include_diagnostics',
-			],
-			'texts' => [
-				'support_sidebar_label',
-				'support_email',
-				'support_success_message',
-			],
-			'textareas' => [
-				'support_topics',
-				'support_instructions',
-			],
-		],
-		'login' => [
-			'checkbox' => [
-				'login_enable_custom_login_branding',
-			],
-			'texts' => [
-				'login_logo_url',
-				'login_logo_link_url',
-				'login_logo_title_text',
-				'login_background_color',
-				'login_button_color',
-			],
-			'textareas' => [
-				'login_help_text',
-			],
-		],
-		'white-label' => [
-			'checkbox' => [
-				'whitelabel_enable_whitelabel_features',
-				'whitelabel_hide_settings_page',
-				'whitelabel_hide_plugin_from_plugins_list',
-				'whitelabel_hide_update_ui',
-				'whitelabel_hide_support_page',
-			],
-		],
-	];
+			'branding_footer_enabled',
+			'support_widget_enabled',
+			'support_page_enabled',
+			'support_include_diagnostics',
+			'support_force_from_domain',
+			'login_branding_enabled',
 
-	$fields = isset( $tab_fields[ $active_tab ] ) ? $tab_fields[ $active_tab ] : $tab_fields['dashboard'];
+			'plugin_whitelabel_enabled',
+			'plugin_hide_settings_menu',
+			'plugin_hide_from_plugins_list',
+			'plugin_hide_plugin_ui_badges',
+			'plugin_hide_support_menu_from_adminbar',
 
-	$output = $existing;
+			'comments_disable_sitewide',
+			'comments_disable_feeds',
 
-	$sanitize_text = static function( $value ) {
-		return sanitize_text_field( (string) $value );
-	};
-	$sanitize_textarea = static function( $value ) {
-		return sanitize_textarea_field( (string) $value );
-	};
+			'security_disable_xmlrpc_pingbacks',
+			'security_disable_application_passwords',
+			'security_block_author_enum',
+			'security_remove_generator',
+			'security_force_ssl_admin',
 
-	// Checkboxes: explicitly set 1/0 for keys in this tab.
-	if ( ! empty( $fields['checkbox'] ) ) {
-		foreach ( $fields['checkbox'] as $key ) {
-			$output[ $key ] = isset( $input[ $key ] ) ? 1 : 0;
+			'perf_disable_emojis',
+			'perf_disable_oembed',
+			'perf_disable_dashicons_visitors',
+			'perf_limit_revisions_enabled',
+
+			'seo_disable_attachment_pages',
+		];
+
+		foreach ( $checkbox_keys as $key ) {
+			$output[ $key ] = ! empty( $input[ $key ] ) ? 1 : 0;
 		}
-	}
 
-	// Text inputs.
-	if ( ! empty( $fields['texts'] ) ) {
-		foreach ( $fields['texts'] as $key ) {
-			if ( array_key_exists( $key, $input ) ) {
-				$output[ $key ] = $sanitize_text( $input[ $key ] );
-			}
+		$text_keys = [
+			'menu_hide_custom_slugs',
+			'submenu_hide_custom_slugs',
+			'label_posts',
+			'label_pages',
+			'label_media',
+			'label_cpt_map',
+			'branding_footer_text',
+			'branding_footer_version_text',
+			'branding_support_logo_url',
+			'branding_support_widget_intro',
+			'branding_support_page_intro',
+			'support_page_label',
+			'support_email',
+			'support_topic_options',
+			'support_success_message',
+			'support_instructions_text',
+			'login_logo_url',
+			'login_logo_link_url',
+			'login_logo_title',
+			'login_bg_color',
+			'login_button_color',
+			'login_help_text',
+			'dashboard_remove_custom_widget_ids',
+			'admin_notice_hide_selectors',
+		];
+
+		foreach ( $text_keys as $key ) {
+			$output[ $key ] = isset( $input[ $key ] ) ? (string) $input[ $key ] : ( $defaults[ $key ] ?? '' );
 		}
-	}
 
-	// Textareas.
-	if ( ! empty( $fields['textareas'] ) ) {
-		foreach ( $fields['textareas'] as $key ) {
-			if ( array_key_exists( $key, $input ) ) {
-				$output[ $key ] = $sanitize_textarea( $input[ $key ] );
-			}
-		}
-	}
+		// sanitize
+		$output['menu_hide_custom_slugs']        = sanitize_textarea_field( $output['menu_hide_custom_slugs'] );
+		$output['submenu_hide_custom_slugs']     = sanitize_textarea_field( $output['submenu_hide_custom_slugs'] );
+		$output['label_posts']                   = sanitize_text_field( $output['label_posts'] );
+		$output['label_pages']                   = sanitize_text_field( $output['label_pages'] );
+		$output['label_media']                   = sanitize_text_field( $output['label_media'] );
+		$output['label_cpt_map']                 = sanitize_textarea_field( $output['label_cpt_map'] );
 
-	return $output;
-}
+		$output['branding_footer_text']          = sanitize_text_field( $output['branding_footer_text'] );
+		$output['branding_footer_version_text']  = sanitize_text_field( $output['branding_footer_version_text'] );
+		$output['branding_support_logo_url']     = esc_url_raw( $output['branding_support_logo_url'] );
+		$output['branding_support_widget_intro'] = sanitize_text_field( $output['branding_support_widget_intro'] );
+		$output['branding_support_page_intro']   = sanitize_text_field( $output['branding_support_page_intro'] );
+
+		$output['support_page_label']            = sanitize_text_field( $output['support_page_label'] );
+		$output['support_email']                 = sanitize_email( $output['support_email'] );
+		$output['support_topic_options']         = sanitize_textarea_field( $output['support_topic_options'] );
+		$output['support_success_message']       = sanitize_text_field( $output['support_success_message'] );
+		$output['support_instructions_text']     = sanitize_textarea_field( $output['support_instructions_text'] );
+
+		$output['login_logo_url']                = esc_url_raw( $output['login_logo_url'] );
+		$output['login_logo_link_url']           = esc_url_raw( $output['login_logo_link_url'] );
+		$output['login_logo_title']              = sanitize_text_field( $output['login_logo_title'] );
+		$output['login_bg_color']                = sanitize_text_field( $output['login_bg_color'] );
+		$output['login_button_color']            = sanitize_text_field( $output['login_button_color'] );
+		$output['login_help_text']               = sanitize_textarea_field( $output['login_help_text'] );
+
+		$output['dashboard_remove_custom_widget_ids'] = sanitize_textarea_field( $output['dashboard_remove_custom_widget_ids'] );
+		$output['admin_notice_hide_selectors']        = sanitize_textarea_field( $output['admin_notice_hide_selectors'] );
+
+		$output['perf_limit_revisions_count']    = isset( $input['perf_limit_revisions_count'] ) ? max( 0, (int) $input['perf_limit_revisions_count'] ) : (int) $defaults['perf_limit_revisions_count'];
+
+		return wp_parse_args( $output, $defaults );
+	}
 
 	public function can_manage() {
 		return current_user_can( 'manage_options' );
@@ -278,12 +275,20 @@ class BWS_Settings {
 			return;
 		}
 
-		add_action( 'admin_enqueue_scripts', [ $this, 'enqueue_admin_assets' ] );
+		// Hide settings menu when requested; page remains accessible via direct URL.
+		if ( ! $this->get( 'plugin_hide_settings_menu', 0 ) ) {
+			add_options_page(
+				__( 'Best Website Support Settings', BWS_TEXT_DOMAIN ),
+				__( 'Website Support', BWS_TEXT_DOMAIN ),
+				'manage_options',
+				BWS_SETTINGS_PAGE_SLUG,
+				[ $this, 'render_settings_page' ]
+			);
+		}
 
-		$parent_slug = $this->get( 'plugin_show_settings_menu', 0 ) ? null : 'options-general.php';
-
+		// Always register page for direct access (even if menu hidden).
 		add_submenu_page(
-			$parent_slug,
+			null,
 			__( 'Best Website Support Settings', BWS_TEXT_DOMAIN ),
 			__( 'Website Support', BWS_TEXT_DOMAIN ),
 			'manage_options',
@@ -292,19 +297,20 @@ class BWS_Settings {
 		);
 	}
 
-	private function checkbox( $key, $label ) {
+	private function checkbox( $key, $label, $desc = '' ) {
 		printf(
-			'<label><input type="checkbox" name="%1$s[%2$s]" value="1" %3$s> %4$s</label>',
+			'<label class="bws-field"><input type="checkbox" name="%1$s[%2$s]" value="1" %3$s> <span class="bws-field-label">%4$s</span>%5$s</label>',
 			esc_attr( BWS_OPTION_KEY ),
 			esc_attr( $key ),
 			checked( 1, (int) $this->get( $key, 0 ), false ),
-			esc_html( $label )
+			esc_html( $label ),
+			$desc ? '<span class="bws-field-desc">' . esc_html( $desc ) . '</span>' : ''
 		);
 	}
 
 	private function text( $key, $label, $placeholder = '' ) {
 		printf(
-			'<label for="%1$s_%2$s"><strong>%3$s</strong></label><br><input type="text" class="regular-text" id="%1$s_%2$s" name="%1$s[%2$s]" value="%4$s" placeholder="%5$s">',
+			'<label class="bws-field" for="%1$s_%2$s"><span class="bws-field-label">%3$s</span><input type="text" class="regular-text" id="%1$s_%2$s" name="%1$s[%2$s]" value="%4$s" placeholder="%5$s"></label>',
 			esc_attr( BWS_OPTION_KEY ),
 			esc_attr( $key ),
 			esc_html( $label ),
@@ -313,48 +319,41 @@ class BWS_Settings {
 		);
 	}
 
-	private function textarea( $key, $label, $rows = 4 ) {
+	private function textarea( $key, $label, $rows = 4, $desc = '' ) {
 		printf(
-			'<label for="%1$s_%2$s"><strong>%3$s</strong></label><br><textarea class="large-text code" rows="%5$d" id="%1$s_%2$s" name="%1$s[%2$s]">%4$s</textarea>',
+			'<label class="bws-field" for="%1$s_%2$s"><span class="bws-field-label">%3$s</span><textarea class="large-text code" rows="%5$d" id="%1$s_%2$s" name="%1$s[%2$s]">%4$s</textarea>%6$s</label>',
 			esc_attr( BWS_OPTION_KEY ),
 			esc_attr( $key ),
 			esc_html( $label ),
 			esc_textarea( (string) $this->get( $key, '' ) ),
-			(int) $rows
+			(int) $rows,
+			$desc ? '<span class="bws-field-desc">' . esc_html( $desc ) . '</span>' : ''
 		);
 	}
 
-	private function color( $key, $label ) {
+	private function number( $key, $label, $min = 0, $max = 999 ) {
 		printf(
-			'<label for="%1$s_%2$s"><strong>%3$s</strong></label><br><input type="text" class="regular-text" id="%1$s_%2$s" name="%1$s[%2$s]" value="%4$s" placeholder="#2271b1">',
+			'<label class="bws-field" for="%1$s_%2$s"><span class="bws-field-label">%3$s</span><input type="number" min="%6$d" max="%7$d" class="small-text" id="%1$s_%2$s" name="%1$s[%2$s]" value="%4$s"></label>',
 			esc_attr( BWS_OPTION_KEY ),
 			esc_attr( $key ),
 			esc_html( $label ),
-			esc_attr( (string) $this->get( $key, '' ) )
+			esc_attr( (string) $this->get( $key, '' ) ),
+			esc_attr( (string) $this->get( $key, '' ) ),
+			(int) $min,
+			(int) $max
 		);
 	}
 
-
-public function enqueue_admin_assets( $hook_suffix ) {
-	// Only load on our settings screen.
-	if ( 'settings_page_' . BWS_SETTINGS_PAGE_SLUG !== $hook_suffix ) {
-		return;
+	private function is_elementor_active() {
+		return did_action( 'elementor/loaded' ) || class_exists( '\\Elementor\\Plugin' );
 	}
-
-	$css = BWS_PLUGIN_URL . 'assets/admin-settings.css';
-	wp_enqueue_style( 'bws-admin-settings', $css, [], BWS_VERSION );
-
-	$js = BWS_PLUGIN_URL . 'assets/admin-settings.js';
-	wp_enqueue_script( 'bws-admin-settings', $js, [ 'jquery' ], BWS_VERSION, true );
-}
 
 	public function render_settings_page() {
 		if ( ! $this->can_manage() ) {
 			wp_die( esc_html__( 'You do not have permission to access this page.', BWS_TEXT_DOMAIN ) );
 		}
 
-		$active_tab = isset( $_GET['tab'] ) ? sanitize_key( wp_unslash( $_GET['tab'] ) ) : 'dashboard';
-		$tabs       = [
+		$tabs = [
 			'dashboard'    => __( 'Dashboard', BWS_TEXT_DOMAIN ),
 			'updates'      => __( 'Updates', BWS_TEXT_DOMAIN ),
 			'restrictions' => __( 'Restrictions', BWS_TEXT_DOMAIN ),
@@ -362,164 +361,187 @@ public function enqueue_admin_assets( $hook_suffix ) {
 			'branding'     => __( 'Branding', BWS_TEXT_DOMAIN ),
 			'support'      => __( 'Support', BWS_TEXT_DOMAIN ),
 			'login'        => __( 'Login', BWS_TEXT_DOMAIN ),
-			'whitelabel'   => __( 'White-Label', BWS_TEXT_DOMAIN ),
+			'hardening'    => __( 'Hardening & Performance', BWS_TEXT_DOMAIN ),
+			'whitelabel'   => __( 'White-label', BWS_TEXT_DOMAIN ),
 		];
-		if ( ! isset( $tabs[ $active_tab ] ) ) {
-			$active_tab = 'dashboard';
-		}
-		$base_url = admin_url( 'options-general.php?page=' . BWS_SETTINGS_PAGE_SLUG );
-
 		?>
-		<div class="wrap bws-settings-wrap" data-bws-active-tab="<?php echo esc_attr( $active_tab ); ?>">
+		<div class="wrap bws-settings-wrap">
 			<h1><?php echo esc_html__( 'Best Website Support Settings', BWS_TEXT_DOMAIN ); ?></h1>
-			<p><?php echo esc_html__( 'Client admin cleanup, branding, login customization, and support tools for managed WordPress sites.', BWS_TEXT_DOMAIN ); ?></p>
-			<p>
-				<a class="button" href="<?php echo esc_url( admin_url( 'admin.php?page=' . BWS_SUPPORT_PAGE_SLUG ) ); ?>"><?php echo esc_html__( 'Open Website Support Page', BWS_TEXT_DOMAIN ); ?></a>
-				<a class="button button-secondary" href="<?php echo esc_url( admin_url( 'options-general.php?page=' . BWS_SETTINGS_PAGE_SLUG ) ); ?>"><?php echo esc_html__( 'Refresh', BWS_TEXT_DOMAIN ); ?></a>
-			</p>
+			<p><?php echo esc_html__( 'Client admin cleanup, branding, login customization, performance hardening, and support tools for managed WordPress sites.', BWS_TEXT_DOMAIN ); ?></p>
 
-			<h2 class="nav-tab-wrapper bws-settings-tabs" role="tablist">
-				<?php foreach ( $tabs as $tab_key => $label ) :
-					$url   = add_query_arg( 'tab', $tab_key, $base_url );
-					$class = 'nav-tab' . ( $tab_key === $active_tab ? ' nav-tab-active' : '' );
-					?>
-					<a class="<?php echo esc_attr( $class ); ?>" href="<?php echo esc_url( $url ); ?>" role="tab" aria-selected="<?php echo $tab_key === $active_tab ? 'true' : 'false'; ?>">
-						<?php echo esc_html( $label ); ?>
-					</a>
+			<nav class="bws-tabs" aria-label="<?php echo esc_attr__( 'Settings sections', BWS_TEXT_DOMAIN ); ?>">
+				<?php foreach ( $tabs as $slug => $label ) : ?>
+					<a href="#<?php echo esc_attr( $slug ); ?>" class="bws-tab" data-bws-tab="<?php echo esc_attr( $slug ); ?>"><?php echo esc_html( $label ); ?></a>
 				<?php endforeach; ?>
-			</h2>
+			</nav>
 
 			<form method="post" action="options.php">
 				<?php settings_fields( 'bws_settings_group' ); ?>
-				<div class="bws-tab-panel" data-bws-tab="<?php echo esc_attr( $active_tab ); ?>">
-					<?php
-					switch ( $active_tab ) {
-						case 'updates':
-							?>
-							<h2><?php esc_html_e( 'Update UI Cleanup', BWS_TEXT_DOMAIN ); ?></h2>
-							<p><?php $this->checkbox( 'updates_hide_nag', 'Hide update nag' ); ?></p>
-							<p><?php $this->checkbox( 'updates_hide_plugin_rows', 'Hide plugin update rows/messages' ); ?></p>
-							<p><?php $this->checkbox( 'updates_hide_badges', 'Hide update badges/counts' ); ?></p>
-							<p><?php $this->checkbox( 'updates_hide_auto_update_column', 'Hide plugin auto-update column/links' ); ?></p>
-							<p><?php $this->checkbox( 'updates_hide_plugin_update_tab', 'Hide Plugins “Update Available” tab' ); ?></p>
-							<p><?php $this->checkbox( 'restrict_updates_page', 'Hide/redirect Updates screen' ); ?></p>
-							<p><?php $this->textarea( 'admin_notice_hide_selectors', 'Admin Notice CSS Selectors to Hide (one per line)', 4 ); ?></p>
-							<?php
-							break;
 
-						case 'restrictions':
-							?>
-							<h2><?php esc_html_e( 'Admin Restrictions & Menu Cleanup', BWS_TEXT_DOMAIN ); ?></h2>
-							<p><?php $this->checkbox( 'restrict_plugin_editor', 'Hide Plugin File Editor' ); ?></p>
-							<p><?php $this->checkbox( 'restrict_theme_editor', 'Hide Theme File Editor' ); ?></p>
-							<p><?php $this->checkbox( 'restrict_plugin_install', 'Hide Plugin Add New / Upload' ); ?></p>
-							<p><?php $this->checkbox( 'restrict_plugin_delete', 'Hide Plugin Delete links' ); ?></p>
-							<p><?php $this->checkbox( 'restrict_theme_install', 'Hide Theme Add New / Upload' ); ?></p>
-							<p><?php $this->checkbox( 'restrict_theme_switch', 'Hide Theme switching / Theme pages' ); ?></p>
-							<p><?php $this->checkbox( 'menu_hide_tools', 'Hide Tools menu' ); ?></p>
-							<p><?php $this->checkbox( 'menu_hide_comments', 'Hide Comments menu' ); ?></p>
-							<p><?php $this->checkbox( 'menu_hide_settings', 'Hide Settings menu' ); ?></p>
-							<p><?php $this->checkbox( 'menu_hide_users', 'Hide Users menu' ); ?></p>
-							<p><?php $this->checkbox( 'menu_hide_plugins', 'Hide Plugins menu' ); ?></p>
-							<p><?php $this->checkbox( 'menu_hide_appearance', 'Hide Appearance menu' ); ?></p>
-							<p><?php $this->textarea( 'menu_hide_custom_slugs', 'Hide Top-Level Menu Slugs (one per line)', 4 ); ?></p>
-							<p><?php $this->textarea( 'submenu_hide_custom_slugs', 'Hide Submenu Slugs (format: parent_slug|submenu_slug, one per line)', 4 ); ?></p>
-							<?php
-							break;
+				<div class="bws-panels">
 
-						case 'labels':
-							?>
-							<h2><?php esc_html_e( 'Label Renaming', BWS_TEXT_DOMAIN ); ?></h2>
-							<p><?php $this->text( 'label_posts', 'Rename “Posts” (optional)' ); ?></p>
-							<p><?php $this->text( 'label_pages', 'Rename “Pages” (optional)' ); ?></p>
-							<p><?php $this->text( 'label_media', 'Rename “Media” (optional)' ); ?></p>
-							<p><?php $this->textarea( 'label_cpt_map', 'CPT Menu Label Overrides (post_type|Menu Label|Add New Label)', 6 ); ?></p>
-							<?php
-							break;
+					<section class="bws-panel" data-bws-panel="dashboard">
+						<h2><?php esc_html_e( 'Dashboard Cleanup', BWS_TEXT_DOMAIN ); ?></h2>
+						<div class="bws-card">
+							<?php $this->checkbox( 'dashboard_remove_quick_draft', 'Remove Quick Draft' ); ?>
+							<?php $this->checkbox( 'dashboard_remove_events_news', 'Remove WordPress Events and News' ); ?>
+							<?php $this->checkbox( 'dashboard_remove_activity', 'Remove Activity' ); ?>
+							<?php $this->checkbox( 'dashboard_remove_at_a_glance', 'Remove At a Glance' ); ?>
+							<?php $this->checkbox( 'dashboard_remove_site_health', 'Remove Site Health' ); ?>
+							<?php $this->checkbox( 'dashboard_remove_welcome_panel', 'Remove Welcome Panel' ); ?>
+							<?php $this->checkbox( 'dashboard_remove_wp_mail_smtp_widget', 'Remove WP Mail SMTP dashboard widget', 'Hides WP Mail SMTP Reports widget on the Dashboard.' ); ?>
 
-						case 'branding':
-							?>
-							<h2><?php esc_html_e( 'Branding', BWS_TEXT_DOMAIN ); ?></h2>
-							<p><?php $this->checkbox( 'branding_footer_enabled', 'Replace admin footer text' ); ?></p>
-							<p><?php $this->text( 'branding_footer_text', 'Footer Text' ); ?></p>
-							<p><?php $this->text( 'branding_footer_version_text', 'Footer Version Text (optional)' ); ?></p>
-							<p><?php $this->text( 'branding_support_logo_url', 'Support Logo URL (optional)' ); ?></p>
-							<p><?php $this->text( 'branding_support_widget_intro', 'Support Widget Intro Text' ); ?></p>
-							<p><?php $this->text( 'branding_support_page_intro', 'Support Page Intro Text' ); ?></p>
-							<?php
-							break;
-
-						case 'support':
-							?>
-							<h2><?php esc_html_e( 'Website Support', BWS_TEXT_DOMAIN ); ?></h2>
-							<p><?php $this->checkbox( 'support_widget_enabled', 'Enable Dashboard Widget' ); ?></p>
-							<p><?php $this->checkbox( 'support_page_enabled', 'Enable Support Sidebar Page' ); ?></p>
-							<p><?php $this->text( 'support_page_label', 'Support Sidebar Label', 'Website Support' ); ?></p>
-							<p><?php $this->text( 'support_email', 'Support Email', 'support@bestwebsite.com' ); ?></p>
-							<p><?php $this->textarea( 'support_topic_options', 'Topics (one per line)', 6 ); ?></p>
-							<p><?php $this->text( 'support_success_message', 'Success Message' ); ?></p>
-							<p><?php $this->textarea( 'support_instructions_text', 'Instructions', 4 ); ?></p>
-							<p><?php $this->checkbox( 'support_include_diagnostics', 'Include diagnostics metadata in emails' ); ?></p>
-							<?php
-							break;
-
-						case 'login':
-							?>
-							<h2><?php esc_html_e( 'Login Branding', BWS_TEXT_DOMAIN ); ?></h2>
-							<p><?php $this->checkbox( 'login_branding_enabled', 'Enable custom login branding' ); ?></p>
-							<p><?php $this->text( 'login_logo_url', 'Login Logo URL (optional)' ); ?></p>
-							<p><?php $this->text( 'login_logo_link_url', 'Login Logo Link URL' ); ?></p>
-							<p><?php $this->text( 'login_logo_title', 'Login Logo Title Text' ); ?></p>
-							<p><?php $this->color( 'login_bg_color', 'Login Background Color' ); ?></p>
-							<p><?php $this->color( 'login_button_color', 'Login Button Color' ); ?></p>
-							<p><?php $this->textarea( 'login_help_text', 'Login Help Text (shown below form)', 3 ); ?></p>
-							<?php
-							break;
-
-						case 'whitelabel':
-							?>
-							<h2><?php esc_html_e( 'Plugin Visibility / White-Label', BWS_TEXT_DOMAIN ); ?></h2>
-							<p><?php $this->checkbox( 'plugin_whitelabel_enabled', 'Enable white-label behavior' ); ?></p>
-							<p><?php $this->checkbox( 'plugin_show_settings_menu', 'Hide settings page in admin menu (direct URL only)' ); ?></p>
-							<p><?php $this->checkbox( 'plugin_hide_from_plugins_list', 'Hide this plugin from Plugins list (advanced; test carefully)' ); ?></p>
-							<p><?php $this->checkbox( 'plugin_hide_plugin_ui_badges', 'Hide this plugin’s update row/badges when possible' ); ?></p>
-							<p><?php $this->checkbox( 'plugin_hide_support_menu_from_adminbar', 'Hide support page from admin bar shortcuts (future-safe)' ); ?></p>
-							<?php
-							break;
-
-						case 'dashboard':
-						default:
-							?>
-							<h2><?php esc_html_e( 'Dashboard Cleanup', BWS_TEXT_DOMAIN ); ?></h2>
-							<p><?php $this->checkbox( 'dashboard_remove_quick_draft', 'Remove Quick Draft' ); ?></p>
-							<p><?php $this->checkbox( 'dashboard_remove_events_news', 'Remove WordPress Events and News' ); ?></p>
-							<p><?php $this->checkbox( 'dashboard_remove_activity', 'Remove Activity' ); ?></p>
-							<p><?php $this->checkbox( 'dashboard_remove_at_a_glance', 'Remove At a Glance' ); ?></p>
-							<p><?php $this->checkbox( 'dashboard_remove_site_health', 'Remove Site Health' ); ?></p>
-							<p><?php $this->checkbox( 'dashboard_remove_welcome_panel', 'Remove Welcome Panel' ); ?></p>
-
-							<p><?php $this->checkbox( 'dashboard_remove_wp_mail_smtp_reports_widget_lite', 'Remove WP Mail SMTP dashboard widget' ); ?></p>
-							<?php if ( class_exists( '\\Elementor\\Plugin' ) ) : ?>
-								<p><?php $this->checkbox( 'dashboard_remove_elementor_overview', 'Remove Elementor Overview dashboard widget' ); ?></p>
-								<p><?php $this->checkbox( 'dashboard_remove_elementor_ally', 'Remove Elementor Accessibility dashboard widget' ); ?></p>
+							<?php if ( $this->is_elementor_active() ) : ?>
+								<hr />
+								<h3><?php esc_html_e( 'Elementor', BWS_TEXT_DOMAIN ); ?></h3>
+								<?php $this->checkbox( 'dashboard_remove_elementor_overview', 'Remove Elementor Overview widget', 'Dashboard widget ID: e-dashboard-overview' ); ?>
+								<?php $this->checkbox( 'dashboard_remove_elementor_ally', 'Remove Elementor Accessibility widget', 'Dashboard widget ID: e-dashboard-ally' ); ?>
 							<?php endif; ?>
 
-							<?php $this->checkbox( 'dashboard_remove_wp_mail_smtp_widget', __( 'Remove WP Mail SMTP dashboard widget', BWS_TEXT_DOMAIN ) ); ?>
-							<?php if ( class_exists( '\\Elementor\\Plugin' ) ) : ?>
-								<?php $this->checkbox( 'dashboard_remove_elementor_overview_widget', __( 'Remove Elementor Overview dashboard widget', BWS_TEXT_DOMAIN ) ); ?>
-								<?php $this->checkbox( 'dashboard_remove_elementor_accessibility_widget', __( 'Remove Elementor Accessibility dashboard widget', BWS_TEXT_DOMAIN ) ); ?>
-							<?php endif; ?>
+							<hr />
+							<?php $this->textarea( 'dashboard_remove_custom_widget_ids', 'Custom Dashboard Widget IDs to Remove (one per line)', 4, 'Tip: paste widget IDs like e-dashboard-ally, qi_addons_for_elementor_dashboard_widget, etc.' ); ?>
 
-							<p><?php $this->textarea( 'dashboard_remove_custom_widget_ids', 'Custom Dashboard Widget IDs to Remove (one per line)', 4 ); ?></p>
-							<p><?php $this->textarea( 'admin_notice_hide_selectors', 'Admin Notice CSS Selectors to Hide (one per line)' ); ?></p>
+							<?php $this->textarea( 'admin_notice_hide_selectors', 'Admin Notice CSS Selectors to Hide (one per line)', 4, 'You can paste a CSS selector (e.g. .notice.notice-info) OR a space-delimited class list (e.g. venture_admin_notice notice notice-info).' ); ?>
+						</div>
 
-							<?php
-							break;
-					}
-					?>
+						<?php submit_button( __( 'Save Settings', BWS_TEXT_DOMAIN ) ); ?>
+					</section>
+
+					<section class="bws-panel" data-bws-panel="updates">
+						<h2><?php esc_html_e( 'Update UI Cleanup', BWS_TEXT_DOMAIN ); ?></h2>
+						<div class="bws-card">
+							<?php $this->checkbox( 'updates_hide_nag', 'Hide update nag' ); ?>
+							<?php $this->checkbox( 'updates_hide_plugin_rows', 'Hide plugin update rows/messages' ); ?>
+							<?php $this->checkbox( 'updates_hide_badges', 'Hide update badges/counts' ); ?>
+							<?php $this->checkbox( 'updates_hide_auto_update_column', 'Hide auto-update UI + disable auto-updates', 'Recommended when managing updates via WP Remote.' ); ?>
+							<?php $this->checkbox( 'updates_hide_plugin_update_tab', 'Hide Plugins “Update Available” tab' ); ?>
+							<?php $this->checkbox( 'restrict_updates_page', 'Hide/redirect Updates screen' ); ?>
+						</div>
+						<?php submit_button( __( 'Save Settings', BWS_TEXT_DOMAIN ) ); ?>
+					</section>
+
+					<section class="bws-panel" data-bws-panel="restrictions">
+						<h2><?php esc_html_e( 'Admin Restrictions & Menu Cleanup', BWS_TEXT_DOMAIN ); ?></h2>
+						<div class="bws-card">
+							<?php $this->checkbox( 'restrict_plugin_editor', 'Hide Plugin File Editor' ); ?>
+							<?php $this->checkbox( 'restrict_theme_editor', 'Hide Theme File Editor' ); ?>
+							<?php $this->checkbox( 'restrict_plugin_install', 'Hide Plugin Add New / Upload' ); ?>
+							<?php $this->checkbox( 'restrict_plugin_delete', 'Hide Plugin Delete links' ); ?>
+							<?php $this->checkbox( 'restrict_theme_install', 'Hide Theme Add New / Upload' ); ?>
+							<?php $this->checkbox( 'restrict_theme_switch', 'Hide Theme switching / Theme pages' ); ?>
+							<hr />
+							<?php $this->checkbox( 'menu_hide_tools', 'Hide Tools menu' ); ?>
+							<?php $this->checkbox( 'menu_hide_comments', 'Hide Comments menu' ); ?>
+							<?php $this->checkbox( 'menu_hide_settings', 'Hide Settings menu' ); ?>
+							<?php $this->checkbox( 'menu_hide_users', 'Hide Users menu' ); ?>
+							<?php $this->checkbox( 'menu_hide_plugins', 'Hide Plugins menu' ); ?>
+							<?php $this->checkbox( 'menu_hide_appearance', 'Hide Appearance menu' ); ?>
+							<hr />
+							<?php $this->textarea( 'menu_hide_custom_slugs', 'Hide Top-Level Menu Slugs (one per line)', 4 ); ?>
+							<?php $this->textarea( 'submenu_hide_custom_slugs', 'Hide Submenu Slugs (format: parent_slug|submenu_slug, one per line)', 4 ); ?>
+						</div>
+						<?php submit_button( __( 'Save Settings', BWS_TEXT_DOMAIN ) ); ?>
+					</section>
+
+					<section class="bws-panel" data-bws-panel="labels">
+						<h2><?php esc_html_e( 'Label Renaming', BWS_TEXT_DOMAIN ); ?></h2>
+						<div class="bws-card">
+							<?php $this->text( 'label_posts', 'Rename “Posts” (optional)' ); ?>
+							<?php $this->text( 'label_pages', 'Rename “Pages” (optional)' ); ?>
+							<?php $this->text( 'label_media', 'Rename “Media” (optional)' ); ?>
+							<?php $this->textarea( 'label_cpt_map', 'CPT Menu Label Overrides (post_type|Menu Label|Add New Label)', 6 ); ?>
+						</div>
+						<?php submit_button( __( 'Save Settings', BWS_TEXT_DOMAIN ) ); ?>
+					</section>
+
+					<section class="bws-panel" data-bws-panel="branding">
+						<h2><?php esc_html_e( 'Branding', BWS_TEXT_DOMAIN ); ?></h2>
+						<div class="bws-card">
+							<?php $this->checkbox( 'branding_footer_enabled', 'Replace admin footer text' ); ?>
+							<?php $this->text( 'branding_footer_text', 'Footer Text' ); ?>
+							<?php $this->text( 'branding_footer_version_text', 'Footer Version Text (optional)' ); ?>
+							<hr />
+							<?php $this->text( 'branding_support_logo_url', 'Support Logo URL (optional)' ); ?>
+							<?php $this->text( 'branding_support_widget_intro', 'Support Widget Intro Text' ); ?>
+							<?php $this->text( 'branding_support_page_intro', 'Support Page Intro Text' ); ?>
+						</div>
+						<?php submit_button( __( 'Save Settings', BWS_TEXT_DOMAIN ) ); ?>
+					</section>
+
+					<section class="bws-panel" data-bws-panel="support">
+						<h2><?php esc_html_e( 'Website Support', BWS_TEXT_DOMAIN ); ?></h2>
+						<div class="bws-card">
+							<?php $this->checkbox( 'support_widget_enabled', 'Enable Dashboard Widget' ); ?>
+							<?php $this->checkbox( 'support_page_enabled', 'Enable Support Sidebar Page' ); ?>
+							<?php $this->text( 'support_page_label', 'Support Sidebar Label', 'Website Support' ); ?>
+							<?php $this->text( 'support_email', 'Support Email', 'support@bestwebsite.com' ); ?>
+							<?php $this->textarea( 'support_topic_options', 'Topics (one per line)', 6 ); ?>
+							<?php $this->text( 'support_success_message', 'Success Message' ); ?>
+							<?php $this->textarea( 'support_instructions_text', 'Instructions', 4 ); ?>
+							<?php $this->checkbox( 'support_include_diagnostics', 'Include diagnostics metadata in emails' ); ?>
+							<hr />
+							<?php $this->checkbox( 'support_force_from_domain', 'Force outgoing “From” email to site domain (optional)', 'If WP Mail SMTP is active, this will be skipped.' ); ?>
+						</div>
+						<?php submit_button( __( 'Save Settings', BWS_TEXT_DOMAIN ) ); ?>
+					</section>
+
+					<section class="bws-panel" data-bws-panel="login">
+						<h2><?php esc_html_e( 'Login Branding', BWS_TEXT_DOMAIN ); ?></h2>
+						<div class="bws-card">
+							<?php $this->checkbox( 'login_branding_enabled', 'Enable custom login branding' ); ?>
+							<?php $this->text( 'login_logo_url', 'Login Logo URL (optional)' ); ?>
+							<?php $this->text( 'login_logo_link_url', 'Login Logo Link URL' ); ?>
+							<?php $this->text( 'login_logo_title', 'Login Logo Title Text' ); ?>
+							<?php $this->text( 'login_bg_color', 'Login Background Color' ); ?>
+							<?php $this->text( 'login_button_color', 'Login Button Color' ); ?>
+							<?php $this->textarea( 'login_help_text', 'Login Help Text (shown below form)', 3 ); ?>
+						</div>
+						<?php submit_button( __( 'Save Settings', BWS_TEXT_DOMAIN ) ); ?>
+					</section>
+
+					<section class="bws-panel" data-bws-panel="hardening">
+						<h2><?php esc_html_e( 'Hardening & Performance', BWS_TEXT_DOMAIN ); ?></h2>
+						<div class="bws-card">
+							<h3><?php esc_html_e( 'Comments', BWS_TEXT_DOMAIN ); ?></h3>
+							<?php $this->checkbox( 'comments_disable_sitewide', 'Disable comments site-wide', 'Closes comments/pingbacks and removes comment support from post types.' ); ?>
+							<?php $this->checkbox( 'comments_disable_feeds', 'Disable comment feeds (optional)' ); ?>
+
+							<hr />
+							<h3><?php esc_html_e( 'Security', BWS_TEXT_DOMAIN ); ?></h3>
+							<?php $this->checkbox( 'security_force_ssl_admin', 'Force SSL for wp-admin when site uses HTTPS', 'Auto-enforces only if home_url() begins with https://.' ); ?>
+							<?php $this->checkbox( 'security_disable_xmlrpc_pingbacks', 'Disable XML-RPC pingbacks' ); ?>
+							<?php $this->checkbox( 'security_disable_application_passwords', 'Disable Application Passwords' ); ?>
+							<?php $this->checkbox( 'security_block_author_enum', 'Block author enumeration (?author=)' ); ?>
+							<?php $this->checkbox( 'security_remove_generator', 'Remove WordPress generator/version output' ); ?>
+
+							<hr />
+							<h3><?php esc_html_e( 'Performance', BWS_TEXT_DOMAIN ); ?></h3>
+							<?php $this->checkbox( 'perf_disable_emojis', 'Disable emoji scripts/styles' ); ?>
+							<?php $this->checkbox( 'perf_disable_oembed', 'Disable oEmbed discovery + wp-embed.js' ); ?>
+							<?php $this->checkbox( 'perf_disable_dashicons_visitors', 'Disable Dashicons for non-logged-in visitors' ); ?>
+							<?php $this->checkbox( 'perf_limit_revisions_enabled', 'Limit post revisions' ); ?>
+							<?php $this->number( 'perf_limit_revisions_count', 'Max revisions to keep', 0, 100 ); ?>
+
+							<hr />
+							<h3><?php esc_html_e( 'SEO', BWS_TEXT_DOMAIN ); ?></h3>
+							<?php $this->checkbox( 'seo_disable_attachment_pages', 'Disable attachment pages (redirect to media file)', 'Recommended on most sites to avoid thin attachment pages.' ); ?>
+						</div>
+						<?php submit_button( __( 'Save Settings', BWS_TEXT_DOMAIN ) ); ?>
+					</section>
+
+					<section class="bws-panel" data-bws-panel="whitelabel">
+						<h2><?php esc_html_e( 'Plugin Visibility / White-label', BWS_TEXT_DOMAIN ); ?></h2>
+						<div class="bws-card">
+							<?php $this->checkbox( 'plugin_whitelabel_enabled', 'Enable white-label behavior' ); ?>
+							<?php $this->checkbox( 'plugin_hide_settings_menu', 'Hide settings page in admin menu (direct URL only)' ); ?>
+							<?php $this->checkbox( 'plugin_hide_from_plugins_list', 'Hide this plugin from Plugins list (advanced)' ); ?>
+							<?php $this->checkbox( 'plugin_hide_plugin_ui_badges', 'Hide this plugin’s update row/badges when possible' ); ?>
+							<?php $this->checkbox( 'plugin_hide_support_menu_from_adminbar', 'Hide support page from admin bar shortcuts' ); ?>
+						</div>
+						<?php submit_button( __( 'Save Settings', BWS_TEXT_DOMAIN ) ); ?>
+					</section>
+
 				</div>
-
-				<?php submit_button( __( 'Save Settings', BWS_TEXT_DOMAIN ) ); ?>
 			</form>
 		</div>
 		<?php
