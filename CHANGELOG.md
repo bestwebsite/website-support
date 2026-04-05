@@ -44,6 +44,7 @@ Release tags are formatted as `vX.Y.Z`.
 - Restored a clean, deterministic plugin bootstrap file (prevents corrupted release artifacts from taking sites down).
 - Improved dashboard widget removal coverage across additional contexts (`advanced`, `column3`, `column4`) for better compatibility with third-party widgets.
 - Fixed top-level menu hiding to support common pasted values (DOM IDs like `toplevel_page_*` / `menu-posts-*` and `admin.php?page=*`) by normalizing them into valid WordPress menu slugs before removal.
+- Fixed release build failure caused by a misplaced `private` helper method in `BWS_Admin_Cleanup`, and improved top-level menu hiding by normalizing `toplevel_page_*` admin menu IDs into valid `remove_menu_page()` slugs.
 
 ---
 

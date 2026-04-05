@@ -119,33 +119,20 @@ class BWS_Admin_Cleanup {
 			remove_submenu_page( 'themes.php', 'theme-install.php' );
 		}
 
-		$custom_top = preg_split( '/
-||
-/', (string) $this->settings->get( 'menu_hide_custom_slugs', '' ) );
+		$custom_top = preg_split( '/\r\n|\r|\n/', (string) $this->settings->get( 'menu_hide_custom_slugs', '' ) );
 		$custom_top = array_filter( array_map( 'trim', (array) $custom_top ) );
-		foreach ( $custom_top as $raw_slug ) {
-			$slug = $this->normalize_menu_slug( $raw_slug );
-			if ( '' === $slug ) { continue; }
-
-			remove_menu_page( $slug );
-
-			if ( $raw_slug !== $slug ) {
-				remove_menu_page( $raw_slug );
+		foreach ( $custom_top as $slug ) {
+			$slug = $this->normalize_menu_slug( $slug );
+			if ( '' !== $slug ) {
+				remove_menu_page( $slug );
 			}
 		}
-$custom_sub = preg_split( '/\r\n|\r|\n/', (string) $this->settings->get( 'submenu_hide_custom_slugs', '' ) );
+
+		$custom_sub = preg_split( '/\r\n|\r|\n/', (string) $this->settings->get( 'submenu_hide_custom_slugs', '' ) );
 		$custom_sub = array_filter( array_map( 'trim', (array) $custom_sub ) );
 		foreach ( $custom_sub as $line ) {
 			$parts = array_map( 'trim', explode( '|', $line ) );
 			if ( count( $parts ) >= 2 && $parts[0] && $parts[1] ) {
-				$parent = $this->normalize_menu_slug( $parts[0] );
-				$child  = $this->normalize_menu_slug( $parts[1] );
-
-				if ( '' !== $parent && '' !== $child ) {
-					remove_submenu_page( $parent, $child );
-				}
-
-				// Best-effort fallback in case the user already provided real slugs.
 				remove_submenu_page( $parts[0], $parts[1] );
 			}
 		}
@@ -209,41 +196,23 @@ $custom_sub = preg_split( '/\r\n|\r|\n/', (string) $this->settings->get( 'submen
 		}
 		return $actions;
 	}
-}
+
 	/**
-	 * Normalize user-provided menu identifiers to WordPress menu slugs.
+	 * Normalize a top-level menu slug entered by a user.
 	 *
-	 * Users often paste DOM IDs like "toplevel_page_slug" or "menu-posts-cpt".
-	 * WordPress expects the underlying menu slug passed to add_menu_page()/remove_menu_page().
+	 * WordPress' HTML ids often look like: `toplevel_page_some_slug`.
+	 * `remove_menu_page()` expects the actual menu slug: `some_slug`.
 	 */
-	private function normalize_menu_slug( $raw ) {
-		$s = trim( (string) $raw );
-		if ( '' === $s ) { return ''; }
-
-		if ( 0 === strpos( $s, 'toplevel_page_' ) ) {
-			$s = substr( $s, strlen( 'toplevel_page_' ) );
+	private function normalize_menu_slug( $slug ) {
+		$slug = trim( (string) $slug );
+		if ( '' === $slug ) {
+			return '';
 		}
-
-		if ( 0 === strpos( $s, 'menu-posts-' ) ) {
-			$pt = substr( $s, strlen( 'menu-posts-' ) );
-			$pt = trim( $pt );
-			if ( '' !== $pt ) {
-				$s = ( 'post' === $pt ) ? 'edit.php' : 'edit.php?post_type=' . $pt;
-			}
+		// Strip the DOM id prefix used in wp-admin markup.
+		if ( 0 === strpos( $slug, 'toplevel_page_' ) ) {
+			$slug = substr( $slug, strlen( 'toplevel_page_' ) );
 		}
-
-		if ( false !== strpos( $s, 'admin.php?page=' ) ) {
-			$parts = explode( 'admin.php?page=', $s, 2 );
-			$s = isset( $parts[1] ) ? $parts[1] : $s;
-		}
-		if ( false !== strpos( $s, '?page=' ) ) {
-			$parts = explode( '?page=', $s, 2 );
-			$s = isset( $parts[1] ) ? $parts[1] : $s;
-		}
-
-		$s = preg_replace( '/#.*/', '', $s );
-
-		return trim( $s );
+		return trim( $slug );
 	}
 
-
+}
