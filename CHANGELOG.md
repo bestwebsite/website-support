@@ -16,7 +16,7 @@ Release tags are formatted as `vX.Y.Z`.
 
 ---
 
-## [1.0.6] - 2026-04-04
+## [1.0.6] - 2026-04-05
 ### Added
 - New **Hardening & Performance** settings tab with practical security/performance toggles:
   - Force SSL for wp-admin (auto-enables only when the site home URL uses HTTPS).
@@ -43,6 +43,7 @@ Release tags are formatted as `vX.Y.Z`.
 ### Fixed
 - Restored a clean, deterministic plugin bootstrap file (prevents corrupted release artifacts from taking sites down).
 - Improved dashboard widget removal coverage across additional contexts (`advanced`, `column3`, `column4`) for better compatibility with third-party widgets.
+- Fixed top-level menu hiding to support common pasted values (DOM IDs like `toplevel_page_*` / `menu-posts-*` and `admin.php?page=*`) by normalizing them into valid WordPress menu slugs before removal.
 
 ---
 
