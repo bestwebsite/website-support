@@ -12,6 +12,9 @@ class BWS_Settings {
 			'dashboard_remove_at_a_glance'           => 1,
 			'dashboard_remove_site_health'           => 1,
 			'dashboard_remove_welcome_panel'         => 0,
+			'dashboard_remove_wp_mail_smtp_reports_widget_lite' => 0,
+			'dashboard_remove_elementor_overview' => 0,
+			'dashboard_remove_elementor_ally' => 0,
 			'dashboard_remove_custom_widget_ids'     => '',
 
 			'admin_notice_hide_selectors'           => '',
@@ -102,92 +105,169 @@ class BWS_Settings {
 	}
 
 	public function sanitize_settings( $input ) {
-		$defaults = $this->get_defaults();
-		$input    = is_array( $input ) ? $input : [];
-		$output   = [];
+	$input = is_array( $input ) ? $input : [];
 
-		$checkbox_keys = [
-			'dashboard_remove_quick_draft',
-			'dashboard_remove_events_news',
-			'dashboard_remove_activity',
-			'dashboard_remove_at_a_glance',
-			'dashboard_remove_site_health',
-			'dashboard_remove_welcome_panel',
-			'updates_hide_nag',
-			'updates_hide_plugin_rows',
-			'updates_hide_badges',
-			'updates_hide_auto_update_column',
-			'updates_hide_plugin_update_tab',
-			'restrict_updates_page',
-			'restrict_plugin_editor',
-			'restrict_theme_editor',
-			'restrict_plugin_install',
-			'restrict_plugin_delete',
-			'restrict_theme_install',
-			'restrict_theme_switch',
-			'menu_hide_tools',
-			'menu_hide_comments',
-			'menu_hide_settings',
-			'menu_hide_users',
-			'menu_hide_plugins',
-			'menu_hide_appearance',
-			'branding_footer_enabled',
-			'support_widget_enabled',
-			'support_page_enabled',
-			'support_include_diagnostics',
-			'login_branding_enabled',
-			'plugin_whitelabel_enabled',
-			'plugin_show_settings_menu',
-			'plugin_hide_from_plugins_list',
-			'plugin_hide_plugin_ui_badges',
-			'plugin_hide_support_menu_from_adminbar',
-		];
+	// Identify which tab was submitted so we only update fields from that tab.
+	$active_tab = isset( $input['bws_active_tab'] ) ? sanitize_key( (string) $input['bws_active_tab'] ) : 'dashboard';
 
-		foreach ( $checkbox_keys as $key ) {
-			$output[ $key ] = ! empty( $input[ $key ] ) ? 1 : 0;
+	// Load existing saved settings so saving one tab doesn't wipe other tabs.
+	$existing = get_option( BWS_OPTION_KEY, [] );
+	$existing = is_array( $existing ) ? $existing : [];
+
+	// Never persist this helper value.
+	unset( $input['bws_active_tab'] );
+
+	$tab_fields = [
+		'dashboard' => [
+			'checkbox' => [
+				'dashboard_remove_quick_draft',
+				'dashboard_remove_wordpress_events_news',
+				'dashboard_remove_activity',
+				'dashboard_remove_at_a_glance',
+				'dashboard_remove_site_health',
+				'dashboard_remove_welcome_panel',
+				'dashboard_remove_wp_mail_smtp_reports_widget_lite',
+				'dashboard_remove_elementor_overview',
+				'dashboard_remove_elementor_ally',
+			],
+			'textareas' => [
+				'dashboard_remove_custom_widget_ids',
+				'admin_notice_hide_selectors',
+			],
+		],
+		'updates' => [
+			'checkbox' => [
+				'updates_hide_update_nag',
+				'updates_hide_plugin_update_rows',
+				'updates_hide_update_badges_counts',
+				'updates_hide_plugin_auto_update_column_links',
+				'updates_hide_plugins_update_available_tab',
+				'updates_hide_redirect_updates_screen',
+			],
+		],
+		'restrictions' => [
+			'checkbox' => [
+				'restrictions_hide_plugin_editor',
+				'restrictions_hide_theme_editor',
+				'restrictions_hide_plugin_add_new_upload',
+				'restrictions_hide_plugin_delete_links',
+				'restrictions_hide_theme_add_new_upload',
+				'restrictions_hide_theme_switching_theme_pages',
+				'restrictions_hide_updates_screen',
+				'restrictions_hide_tools_menu',
+				'restrictions_hide_comments_menu',
+				'restrictions_hide_settings_menu',
+				'restrictions_hide_users_menu',
+				'restrictions_hide_plugins_menu',
+				'restrictions_hide_appearance_menu',
+			],
+			'textareas' => [
+				'restrictions_hide_top_level_menu_slugs',
+				'restrictions_hide_submenu_slugs',
+			],
+		],
+		'labels' => [
+			'texts' => [
+				'labels_rename_posts',
+				'labels_rename_pages',
+				'labels_rename_media',
+			],
+			'textareas' => [
+				'labels_cpt_menu_overrides',
+			],
+		],
+		'branding' => [
+			'checkbox' => [
+				'branding_enable_admin_footer_text',
+			],
+			'texts' => [
+				'branding_admin_footer_text',
+				'branding_admin_footer_version_text',
+				'branding_support_logo_url',
+				'branding_support_widget_intro_text',
+				'branding_support_page_intro_text',
+			],
+		],
+		'support' => [
+			'checkbox' => [
+				'support_enable_dashboard_widget',
+				'support_enable_support_sidebar_page',
+				'support_include_diagnostics',
+			],
+			'texts' => [
+				'support_sidebar_label',
+				'support_email',
+				'support_success_message',
+			],
+			'textareas' => [
+				'support_topics',
+				'support_instructions',
+			],
+		],
+		'login' => [
+			'checkbox' => [
+				'login_enable_custom_login_branding',
+			],
+			'texts' => [
+				'login_logo_url',
+				'login_logo_link_url',
+				'login_logo_title_text',
+				'login_background_color',
+				'login_button_color',
+			],
+			'textareas' => [
+				'login_help_text',
+			],
+		],
+		'white-label' => [
+			'checkbox' => [
+				'whitelabel_enable_whitelabel_features',
+				'whitelabel_hide_settings_page',
+				'whitelabel_hide_plugin_from_plugins_list',
+				'whitelabel_hide_update_ui',
+				'whitelabel_hide_support_page',
+			],
+		],
+	];
+
+	$fields = isset( $tab_fields[ $active_tab ] ) ? $tab_fields[ $active_tab ] : $tab_fields['dashboard'];
+
+	$output = $existing;
+
+	$sanitize_text = static function( $value ) {
+		return sanitize_text_field( (string) $value );
+	};
+	$sanitize_textarea = static function( $value ) {
+		return sanitize_textarea_field( (string) $value );
+	};
+
+	// Checkboxes: explicitly set 1/0 for keys in this tab.
+	if ( ! empty( $fields['checkbox'] ) ) {
+		foreach ( $fields['checkbox'] as $key ) {
+			$output[ $key ] = isset( $input[ $key ] ) ? 1 : 0;
 		}
-
-		$text_keys = [
-			'branding_footer_text',
-			'branding_footer_version_text',
-			'branding_support_widget_intro',
-			'branding_support_page_intro',
-			'support_page_label',
-			'support_success_message',
-			'login_logo_title',
-			'login_bg_color',
-			'login_button_color',
-		];
-
-		foreach ( $text_keys as $key ) {
-			$output[ $key ] = isset( $input[ $key ] ) ? sanitize_text_field( $input[ $key ] ) : ( $defaults[ $key ] ?? '' );
-		}
-
-		$output['branding_support_logo_url']  = isset( $input['branding_support_logo_url'] ) ? esc_url_raw( $input['branding_support_logo_url'] ) : '';
-		$output['support_email']              = isset( $input['support_email'] ) ? sanitize_email( $input['support_email'] ) : $defaults['support_email'];
-		$output['login_logo_url']             = isset( $input['login_logo_url'] ) ? esc_url_raw( $input['login_logo_url'] ) : '';
-		$output['login_logo_link_url']        = isset( $input['login_logo_link_url'] ) ? esc_url_raw( $input['login_logo_link_url'] ) : home_url( '/' );
-
-		$textarea_keys = [
-			'dashboard_remove_custom_widget_ids',
-			'admin_notice_hide_selectors',
-			'menu_hide_custom_slugs',
-			'submenu_hide_custom_slugs',
-			'label_cpt_map',
-			'support_topic_options',
-			'support_instructions_text',
-			'login_help_text',
-		];
-		foreach ( $textarea_keys as $key ) {
-			$output[ $key ] = isset( $input[ $key ] ) ? sanitize_textarea_field( $input[ $key ] ) : ( $defaults[ $key ] ?? '' );
-		}
-
-		foreach ( [ 'label_posts', 'label_pages', 'label_media' ] as $key ) {
-			$output[ $key ] = isset( $input[ $key ] ) ? sanitize_text_field( $input[ $key ] ) : '';
-		}
-
-		return wp_parse_args( $output, $defaults );
 	}
+
+	// Text inputs.
+	if ( ! empty( $fields['texts'] ) ) {
+		foreach ( $fields['texts'] as $key ) {
+			if ( array_key_exists( $key, $input ) ) {
+				$output[ $key ] = $sanitize_text( $input[ $key ] );
+			}
+		}
+	}
+
+	// Textareas.
+	if ( ! empty( $fields['textareas'] ) ) {
+		foreach ( $fields['textareas'] as $key ) {
+			if ( array_key_exists( $key, $input ) ) {
+				$output[ $key ] = $sanitize_textarea( $input[ $key ] );
+			}
+		}
+	}
+
+	return $output;
+}
 
 	public function can_manage() {
 		return current_user_can( 'manage_options' );
@@ -311,11 +391,6 @@ public function enqueue_admin_assets( $hook_suffix ) {
 
 			<form method="post" action="options.php">
 				<?php settings_fields( 'bws_settings_group' ); ?>
-
-				<div class="bws-savebar">
-					<?php submit_button( __( 'Save Settings', BWS_TEXT_DOMAIN ), 'primary', 'submit', false ); ?>
-				</div>
-
 				<div class="bws-tab-panel" data-bws-tab="<?php echo esc_attr( $active_tab ); ?>">
 					<?php
 					switch ( $active_tab ) {
@@ -422,7 +497,22 @@ public function enqueue_admin_assets( $hook_suffix ) {
 							<p><?php $this->checkbox( 'dashboard_remove_at_a_glance', 'Remove At a Glance' ); ?></p>
 							<p><?php $this->checkbox( 'dashboard_remove_site_health', 'Remove Site Health' ); ?></p>
 							<p><?php $this->checkbox( 'dashboard_remove_welcome_panel', 'Remove Welcome Panel' ); ?></p>
+
+							<p><?php $this->checkbox( 'dashboard_remove_wp_mail_smtp_reports_widget_lite', 'Remove WP Mail SMTP dashboard widget' ); ?></p>
+							<?php if ( class_exists( '\\Elementor\\Plugin' ) ) : ?>
+								<p><?php $this->checkbox( 'dashboard_remove_elementor_overview', 'Remove Elementor Overview dashboard widget' ); ?></p>
+								<p><?php $this->checkbox( 'dashboard_remove_elementor_ally', 'Remove Elementor Accessibility dashboard widget' ); ?></p>
+							<?php endif; ?>
+
+							<?php $this->checkbox( 'dashboard_remove_wp_mail_smtp_widget', __( 'Remove WP Mail SMTP dashboard widget', BWS_TEXT_DOMAIN ) ); ?>
+							<?php if ( class_exists( '\\Elementor\\Plugin' ) ) : ?>
+								<?php $this->checkbox( 'dashboard_remove_elementor_overview_widget', __( 'Remove Elementor Overview dashboard widget', BWS_TEXT_DOMAIN ) ); ?>
+								<?php $this->checkbox( 'dashboard_remove_elementor_accessibility_widget', __( 'Remove Elementor Accessibility dashboard widget', BWS_TEXT_DOMAIN ) ); ?>
+							<?php endif; ?>
+
 							<p><?php $this->textarea( 'dashboard_remove_custom_widget_ids', 'Custom Dashboard Widget IDs to Remove (one per line)', 4 ); ?></p>
+							<p><?php $this->textarea( 'admin_notice_hide_selectors', 'Admin Notice CSS Selectors to Hide (one per line)' ); ?></p>
+
 							<?php
 							break;
 					}

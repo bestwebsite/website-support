@@ -1,4 +1,26 @@
 <?php
+
+// WP Mail SMTP dashboard widget (common on managed sites).
+if ( $this->settings->get( 'dashboard_remove_wp_mail_smtp_reports_widget_lite' ) ) {
+	remove_meta_box( 'wp_mail_smtp_reports_widget_lite', 'dashboard', 'normal' );
+	remove_meta_box( 'wp_mail_smtp_reports_widget_lite', 'dashboard', 'side' );
+	remove_meta_box( 'wp_mail_smtp_reports_widget_lite', 'dashboard', 'advanced' );
+}
+
+// Elementor dashboard widgets (only present when Elementor is active).
+if ( class_exists( '\\Elementor\\Plugin' ) ) {
+	if ( $this->settings->get( 'dashboard_remove_elementor_overview' ) ) {
+		remove_meta_box( 'e-dashboard-overview', 'dashboard', 'normal' );
+		remove_meta_box( 'e-dashboard-overview', 'dashboard', 'side' );
+		remove_meta_box( 'e-dashboard-overview', 'dashboard', 'advanced' );
+	}
+	if ( $this->settings->get( 'dashboard_remove_elementor_ally' ) ) {
+		remove_meta_box( 'e-dashboard-ally', 'dashboard', 'normal' );
+		remove_meta_box( 'e-dashboard-ally', 'dashboard', 'side' );
+		remove_meta_box( 'e-dashboard-ally', 'dashboard', 'advanced' );
+	}
+}
+
 if ( ! defined( 'ABSPATH' ) ) {
 	exit;
 }
@@ -86,5 +108,26 @@ class BWS_Dashboard {
 				remove_meta_box( $id, 'dashboard', $ctx );
 			}
 		}
+	
+
+// Repeat removals in a late pass to catch widgets registered after wp_dashboard_setup.
+if ( $this->settings->get( 'dashboard_remove_wp_mail_smtp_reports_widget_lite' ) ) {
+	remove_meta_box( 'wp_mail_smtp_reports_widget_lite', 'dashboard', 'normal' );
+	remove_meta_box( 'wp_mail_smtp_reports_widget_lite', 'dashboard', 'side' );
+	remove_meta_box( 'wp_mail_smtp_reports_widget_lite', 'dashboard', 'advanced' );
+}
+
+if ( class_exists( '\\Elementor\\Plugin' ) ) {
+	if ( $this->settings->get( 'dashboard_remove_elementor_overview' ) ) {
+		remove_meta_box( 'e-dashboard-overview', 'dashboard', 'normal' );
+		remove_meta_box( 'e-dashboard-overview', 'dashboard', 'side' );
+		remove_meta_box( 'e-dashboard-overview', 'dashboard', 'advanced' );
 	}
+	if ( $this->settings->get( 'dashboard_remove_elementor_ally' ) ) {
+		remove_meta_box( 'e-dashboard-ally', 'dashboard', 'normal' );
+		remove_meta_box( 'e-dashboard-ally', 'dashboard', 'side' );
+		remove_meta_box( 'e-dashboard-ally', 'dashboard', 'advanced' );
+	}
+}
+}
 }
