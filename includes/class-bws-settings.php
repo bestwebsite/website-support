@@ -198,6 +198,8 @@ class BWS_Settings {
 			return;
 		}
 
+		add_action( 'admin_enqueue_scripts', [ $this, 'enqueue_admin_assets' ] );
+
 		$parent_slug = $this->get( 'plugin_show_settings_menu', 0 ) ? null : 'options-general.php';
 
 		add_submenu_page(
@@ -252,6 +254,20 @@ class BWS_Settings {
 		);
 	}
 
+
+public function enqueue_admin_assets( $hook_suffix ) {
+	// Only load on our settings screen.
+	if ( 'settings_page_' . BWS_SETTINGS_PAGE_SLUG !== $hook_suffix ) {
+		return;
+	}
+
+	$css = BWS_PLUGIN_URL . 'assets/admin-settings.css';
+	wp_enqueue_style( 'bws-admin-settings', $css, [], BWS_VERSION );
+
+	$js = BWS_PLUGIN_URL . 'assets/admin-settings.js';
+	wp_enqueue_script( 'bws-admin-settings', $js, [ 'jquery' ], BWS_VERSION, true );
+}
+
 	public function render_settings_page() {
 		if ( ! $this->can_manage() ) {
 			wp_die( esc_html__( 'You do not have permission to access this page.', BWS_TEXT_DOMAIN ) );
@@ -265,9 +281,43 @@ class BWS_Settings {
 				<a class="button button-secondary" href="<?php echo esc_url( admin_url( 'admin.php?page=' . BWS_SETTINGS_PAGE_SLUG ) ); ?>"><?php echo esc_html__( 'Refresh', BWS_TEXT_DOMAIN ); ?></a>
 			</p>
 			<form method="post" action="options.php">
+
+<?php
+$active_tab = isset( $_GET['tab'] ) ? sanitize_key( wp_unslash( $_GET['tab'] ) ) : 'dashboard';
+$tabs = [
+	'dashboard'    => __( 'Dashboard', BWS_TEXT_DOMAIN ),
+	'updates'      => __( 'Updates', BWS_TEXT_DOMAIN ),
+	'restrictions' => __( 'Restrictions', BWS_TEXT_DOMAIN ),
+	'labels'       => __( 'Labels', BWS_TEXT_DOMAIN ),
+	'branding'     => __( 'Branding', BWS_TEXT_DOMAIN ),
+	'support'      => __( 'Support', BWS_TEXT_DOMAIN ),
+	'login'        => __( 'Login', BWS_TEXT_DOMAIN ),
+	'whitelabel'   => __( 'White-Label', BWS_TEXT_DOMAIN ),
+];
+if ( ! isset( $tabs[ $active_tab ] ) ) {
+	$active_tab = 'dashboard';
+}
+$base_url = admin_url( 'options-general.php?page=' . BWS_SETTINGS_PAGE_SLUG );
+?>
+
+<h2 class="nav-tab-wrapper bws-settings-tabs" role="tablist">
+	<?php foreach ( $tabs as $tab_key => $label ) :
+		$url   = add_query_arg( 'tab', $tab_key, $base_url );
+		$class = 'nav-tab' . ( $tab_key === $active_tab ? ' nav-tab-active' : '' );
+	?>
+		<a class="<?php echo esc_attr( $class ); ?>" href="<?php echo esc_url( $url ); ?>" role="tab" aria-selected="<?php echo $tab_key === $active_tab ? 'true' : 'false'; ?>" data-bws-tab="<?php echo esc_attr( $tab_key ); ?>">
+			<?php echo esc_html( $label ); ?>
+		</a>
+	<?php endforeach; ?>
+</h2>
+
+<div class="bws-tab-panels" data-active-tab="<?php echo esc_attr( $active_tab ); ?>">
+
 				<?php settings_fields( 'bws_settings_group' ); ?>
 
-				<h2><?php esc_html_e( 'Dashboard Cleanup', BWS_TEXT_DOMAIN ); ?></h2>
+				</div>
+				<div class="bws-tab-panel" data-bws-panel="dashboard">
+					<h2><?php esc_html_e( 'Dashboard Cleanup', BWS_TEXT_DOMAIN ); ?></h2>
 				<p><?php $this->checkbox( 'dashboard_remove_quick_draft', 'Remove Quick Draft' ); ?></p>
 				<p><?php $this->checkbox( 'dashboard_remove_events_news', 'Remove WordPress Events and News' ); ?></p>
 				<p><?php $this->checkbox( 'dashboard_remove_activity', 'Remove Activity' ); ?></p>
@@ -278,7 +328,9 @@ class BWS_Settings {
 			'admin_notice_hide_selectors', 'Custom Dashboard Widget IDs to Remove (one per line)', 4 ); ?></p>
 
 				<hr>
-				<h2><?php esc_html_e( 'Update UI Cleanup', BWS_TEXT_DOMAIN ); ?></h2>
+				</div>
+				<div class="bws-tab-panel" data-bws-panel="updates">
+					<h2><?php esc_html_e( 'Update UI Cleanup', BWS_TEXT_DOMAIN ); ?></h2>
 				<p><?php $this->checkbox( 'updates_hide_nag', 'Hide update nag' ); ?></p>
 				<p><?php $this->checkbox( 'updates_hide_plugin_rows', 'Hide plugin update rows/messages' ); ?></p>
 				<p><?php $this->checkbox( 'updates_hide_badges', 'Hide update badges/counts' ); ?></p>
@@ -288,7 +340,9 @@ class BWS_Settings {
 				<p><?php $this->textarea( 'admin_notice_hide_selectors', 'Admin Notice CSS Selectors to Hide (one per line)', 4 ); ?></p>
 
 				<hr>
-				<h2><?php esc_html_e( 'Admin Restrictions & Menu Cleanup', BWS_TEXT_DOMAIN ); ?></h2>
+				</div>
+				<div class="bws-tab-panel" data-bws-panel="restrictions">
+					<h2><?php esc_html_e( 'Admin Restrictions & Menu Cleanup', BWS_TEXT_DOMAIN ); ?></h2>
 				<p><?php $this->checkbox( 'restrict_plugin_editor', 'Hide Plugin File Editor' ); ?></p>
 				<p><?php $this->checkbox( 'restrict_theme_editor', 'Hide Theme File Editor' ); ?></p>
 				<p><?php $this->checkbox( 'restrict_plugin_install', 'Hide Plugin Add New / Upload' ); ?></p>
@@ -305,14 +359,18 @@ class BWS_Settings {
 				<p><?php $this->textarea( 'submenu_hide_custom_slugs', 'Hide Submenu Slugs (format: parent_slug|submenu_slug, one per line)', 4 ); ?></p>
 
 				<hr>
-				<h2><?php esc_html_e( 'Label Renaming', BWS_TEXT_DOMAIN ); ?></h2>
+				</div>
+				<div class="bws-tab-panel" data-bws-panel="labels">
+					<h2><?php esc_html_e( 'Label Renaming', BWS_TEXT_DOMAIN ); ?></h2>
 				<p><?php $this->text( 'label_posts', 'Rename “Posts” (optional)' ); ?></p>
 				<p><?php $this->text( 'label_pages', 'Rename “Pages” (optional)' ); ?></p>
 				<p><?php $this->text( 'label_media', 'Rename “Media” (optional)' ); ?></p>
 				<p><?php $this->textarea( 'label_cpt_map', 'CPT Menu Label Overrides (post_type|Menu Label|Add New Label)', 6 ); ?></p>
 
 				<hr>
-				<h2><?php esc_html_e( 'Branding', BWS_TEXT_DOMAIN ); ?></h2>
+				</div>
+				<div class="bws-tab-panel" data-bws-panel="branding">
+					<h2><?php esc_html_e( 'Branding', BWS_TEXT_DOMAIN ); ?></h2>
 				<p><?php $this->checkbox( 'branding_footer_enabled', 'Replace admin footer text' ); ?></p>
 				<p><?php $this->text( 'branding_footer_text', 'Footer Text' ); ?></p>
 				<p><?php $this->text( 'branding_footer_version_text', 'Footer Version Text (optional)' ); ?></p>
@@ -321,7 +379,9 @@ class BWS_Settings {
 				<p><?php $this->text( 'branding_support_page_intro', 'Support Page Intro Text' ); ?></p>
 
 				<hr>
-				<h2><?php esc_html_e( 'Website Support', BWS_TEXT_DOMAIN ); ?></h2>
+				</div>
+				<div class="bws-tab-panel" data-bws-panel="support">
+					<h2><?php esc_html_e( 'Website Support', BWS_TEXT_DOMAIN ); ?></h2>
 				<p><?php $this->checkbox( 'support_widget_enabled', 'Enable Dashboard Widget' ); ?></p>
 				<p><?php $this->checkbox( 'support_page_enabled', 'Enable Support Sidebar Page' ); ?></p>
 				<p><?php $this->text( 'support_page_label', 'Support Sidebar Label', 'Website Support' ); ?></p>
@@ -332,7 +392,9 @@ class BWS_Settings {
 				<p><?php $this->checkbox( 'support_include_diagnostics', 'Include diagnostics metadata in emails' ); ?></p>
 
 				<hr>
-				<h2><?php esc_html_e( 'Login Branding', BWS_TEXT_DOMAIN ); ?></h2>
+				</div>
+				<div class="bws-tab-panel" data-bws-panel="login">
+					<h2><?php esc_html_e( 'Login Branding', BWS_TEXT_DOMAIN ); ?></h2>
 				<p><?php $this->checkbox( 'login_branding_enabled', 'Enable custom login branding' ); ?></p>
 				<p><?php $this->text( 'login_logo_url', 'Login Logo URL (optional)' ); ?></p>
 				<p><?php $this->text( 'login_logo_link_url', 'Login Logo Link URL' ); ?></p>
@@ -342,7 +404,9 @@ class BWS_Settings {
 				<p><?php $this->textarea( 'login_help_text', 'Login Help Text (shown below form)', 3 ); ?></p>
 
 				<hr>
-				<h2><?php esc_html_e( 'Plugin Visibility / White-Label', BWS_TEXT_DOMAIN ); ?></h2>
+				</div>
+				<div class="bws-tab-panel" data-bws-panel="whitelabel">
+					<h2><?php esc_html_e( 'Plugin Visibility / White-Label', BWS_TEXT_DOMAIN ); ?></h2>
 				<p><?php $this->checkbox( 'plugin_whitelabel_enabled', 'Enable white-label behavior' ); ?></p>
 				<p><?php $this->checkbox( 'plugin_show_settings_menu', 'Hide settings page in admin menu (direct URL only)' ); ?></p>
 				<p><?php $this->checkbox( 'plugin_hide_from_plugins_list', 'Hide this plugin from Plugins list (advanced; test carefully)' ); ?></p>
