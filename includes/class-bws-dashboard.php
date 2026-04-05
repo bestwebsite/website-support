@@ -45,4 +45,45 @@ class BWS_Dashboard {
 			remove_action( 'welcome_panel', 'wp_welcome_panel' );
 		}
 	}
+	/**
+	 * Some plugins register dashboard widgets late (after wp_dashboard_setup).
+	 * This second pass removes any widget IDs configured by the user.
+	 */
+	public function late_cleanup_dashboard_widgets() {
+		if ( ! is_admin() || ! current_user_can( 'read' ) ) {
+			return;
+		}
+
+		$screen = function_exists( 'get_current_screen' ) ? get_current_screen() : null;
+		if ( ! $screen || 'dashboard' !== (string) $screen->id ) {
+			return;
+		}
+
+		$raw = (string) $this->settings->get( 'dashboard_remove_custom_widget_ids', '' );
+		$raw = trim( $raw );
+		if ( '' === $raw ) {
+			return;
+		}
+
+		$ids = preg_split( '/\r\n|\r|\n/', $raw );
+		$ids = array_values( array_filter( array_map( 'trim', (array) $ids ) ) );
+		if ( empty( $ids ) ) {
+			return;
+		}
+
+		foreach ( $ids as $id ) {
+			if ( '' === $id || 0 === strpos( $id, '#' ) ) {
+				continue;
+			}
+
+			// remove_meta_box expects a metabox ID (not a CSS selector).
+			if ( false !== strpos( $id, ' ' ) || false !== strpos( $id, '.' ) || false !== strpos( $id, '#' ) ) {
+				continue;
+			}
+
+			remove_meta_box( $id, 'dashboard', 'normal' );
+			remove_meta_box( $id, 'dashboard', 'side' );
+			remove_meta_box( $id, 'dashboard', 'advanced' );
+		}
+	}
 }
