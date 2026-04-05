@@ -122,10 +122,67 @@ class BWS_Admin_Cleanup {
 		$custom_top = preg_split( '/\r\n|\r|\n/', (string) $this->settings->get( 'menu_hide_custom_slugs', '' ) );
 		$custom_top = array_filter( array_map( 'trim', (array) $custom_top ) );
 		foreach ( $custom_top as $slug ) {
-			$slug = $this->normalize_menu_slug( $slug );
-			if ( '' !== $slug ) {
-				remove_menu_page( $slug );
+			$slug = (string) $slug;
+			$slug = trim( $slug );
+			if ( '' === $slug ) {
+				continue;
 			}
+
+			// Support common WP admin menu DOM IDs (e.g. menu-posts-team) by mapping to real slugs.
+			// WP expects slugs like "edit.php?post_type=team" for CPT menus.
+			if ( 0 === strpos( $slug, 'menu-posts-' ) ) {
+				$post_type = substr( $slug, strlen( 'menu-posts-' ) );
+				$post_type = sanitize_key( $post_type );
+				if ( '' !== $post_type ) {
+					remove_menu_page( 'edit.php?post_type=' . $post_type );
+					continue;
+				}
+			}
+
+			// Some plugins/themes expose top-level menu IDs like "toplevel_page_plugin-slug".
+			// WordPress expects the actual menu slug (often the portion after the prefix).
+			if ( 0 === strpos( $slug, 'toplevel_page_' ) ) {
+				$maybe = substr( $slug, strlen( 'toplevel_page_' ) );
+				$maybe = trim( $maybe );
+				if ( '' !== $maybe ) {
+					remove_menu_page( $maybe );
+					continue;
+				}
+			}
+
+			// A few helpful built-in menu ID shorthands.
+			switch ( $slug ) {
+				case 'menu-media':
+					remove_menu_page( 'upload.php' );
+					continue 2;
+				case 'menu-pages':
+					remove_menu_page( 'edit.php?post_type=page' );
+					continue 2;
+				case 'menu-posts':
+					remove_menu_page( 'edit.php' );
+					continue 2;
+				case 'menu-comments':
+					remove_menu_page( 'edit-comments.php' );
+					continue 2;
+				case 'menu-appearance':
+					remove_menu_page( 'themes.php' );
+					continue 2;
+				case 'menu-plugins':
+					remove_menu_page( 'plugins.php' );
+					continue 2;
+				case 'menu-users':
+					remove_menu_page( 'users.php' );
+					continue 2;
+				case 'menu-tools':
+					remove_menu_page( 'tools.php' );
+					continue 2;
+				case 'menu-settings':
+					remove_menu_page( 'options-general.php' );
+					continue 2;
+			}
+
+			// Default: treat value as an actual menu slug.
+			remove_menu_page( $slug );
 		}
 
 		$custom_sub = preg_split( '/\r\n|\r|\n/', (string) $this->settings->get( 'submenu_hide_custom_slugs', '' ) );
@@ -196,23 +253,4 @@ class BWS_Admin_Cleanup {
 		}
 		return $actions;
 	}
-
-	/**
-	 * Normalize a top-level menu slug entered by a user.
-	 *
-	 * WordPress' HTML ids often look like: `toplevel_page_some_slug`.
-	 * `remove_menu_page()` expects the actual menu slug: `some_slug`.
-	 */
-	private function normalize_menu_slug( $slug ) {
-		$slug = trim( (string) $slug );
-		if ( '' === $slug ) {
-			return '';
-		}
-		// Strip the DOM id prefix used in wp-admin markup.
-		if ( 0 === strpos( $slug, 'toplevel_page_' ) ) {
-			$slug = substr( $slug, strlen( 'toplevel_page_' ) );
-		}
-		return trim( $slug );
-	}
-
 }
