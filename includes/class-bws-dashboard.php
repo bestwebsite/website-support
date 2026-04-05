@@ -72,7 +72,7 @@ class BWS_Dashboard {
 		}
 
 		foreach ( $ids as $id ) {
-			if ( '' === $id || 0 === strpos( $id, '#' ) ) {
+			if ( '' === $id ) {
 				continue;
 			}
 
@@ -81,9 +81,10 @@ class BWS_Dashboard {
 				continue;
 			}
 
-			remove_meta_box( $id, 'dashboard', 'normal' );
-			remove_meta_box( $id, 'dashboard', 'side' );
-			remove_meta_box( $id, 'dashboard', 'advanced' );
+			// Attempt removal across all common dashboard contexts.
+			foreach ( [ 'normal', 'side', 'advanced', 'column3', 'column4' ] as $ctx ) {
+				remove_meta_box( $id, 'dashboard', $ctx );
+			}
 		}
 	}
 }

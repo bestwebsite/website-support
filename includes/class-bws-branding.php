@@ -51,9 +51,17 @@ class BWS_Branding {
 		$selectors = [];
 		foreach ( $lines as $line ) {
 			$sel = trim( (string) $line );
-			if ( '' === $sel || 0 === strpos( $sel, '#' ) ) {
+			if ( '' === $sel ) {
 				continue;
 			}
+
+			// Allow comments, but do NOT treat CSS ID selectors (#foo) as comments.
+			// We only skip lines that start with "# " (hash + space) as a comment marker.
+			if ( 0 === strpos( $sel, '# ' ) ) {
+				continue;
+			}
+
+			$sel = $this->normalize_notice_selector( $sel );
 
 			// Strip characters that could break out of CSS and inject markup.
 			$sel = str_replace( [ '{', '}', ';', '<', '>' ], '', $sel );
@@ -87,5 +95,29 @@ class BWS_Branding {
 		echo "\n" . '<style id="bws-admin-notice-hide-css">' . "\n";
 		echo implode( "\n", $rules ) . "\n";
 		echo "</style>\n";
+	}
+
+	/**
+	 * Normalize a selector entered by a human.
+	 *
+	 * Supports the common case where a user copies a space-delimited class list
+	 * (e.g. "notice notice-info is-dismissible") by turning it into
+	 * ".notice.notice-info.is-dismissible".
+	 */
+	private function normalize_notice_selector( $sel ) {
+		$sel = trim( (string) $sel );
+
+		$looks_like_class_list = ( false !== strpos( $sel, ' ' ) )
+			&& false === strpbrk( $sel, '.#[:>+~' );
+
+		if ( $looks_like_class_list ) {
+			$parts = preg_split( '/\s+/', $sel );
+			$parts = is_array( $parts ) ? array_filter( array_map( 'trim', $parts ) ) : [];
+			if ( ! empty( $parts ) ) {
+				$sel = '.' . implode( '.', $parts );
+			}
+		}
+
+		return $sel;
 	}
 }
