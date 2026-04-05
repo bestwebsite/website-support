@@ -28,6 +28,7 @@ Release tags are formatted as `vX.Y.Z`.
 - Prevented admin-notice selector settings from being dropped/hidden after the settings UI modernization work (so notice hiding is available again and behaves predictably).
 - Fixed fatal error: add missing admin notice CSS output method
 - Fixed: restore missing methods referenced by hooks (branding + dashboard)
+- Restored tabbed Settings UI (nav tabs + panels + settings-screen JS)
 
 ---
 
