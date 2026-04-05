@@ -81,7 +81,16 @@ class BWS_Menu_Labels {
 			if ( count( $parts ) < 2 ) {
 				continue;
 			}
-			$post_type = sanitize_key( $parts[0] );
+			$raw_key  = sanitize_text_field( $parts[0] );
+			$raw_key  = trim( $raw_key );
+			// Allow either post_type (event-item) OR the WP admin menu id (menu-posts-event-item) OR a full slug (edit.php?post_type=event-item).
+			if ( 0 === strpos( $raw_key, 'menu-posts-' ) ) {
+				$raw_key = substr( $raw_key, strlen( 'menu-posts-' ) );
+			}
+			if ( 0 === strpos( $raw_key, 'edit.php?post_type=' ) ) {
+				$raw_key = substr( $raw_key, strlen( 'edit.php?post_type=' ) );
+			}
+			$post_type = sanitize_key( $raw_key );
 			$menu_lbl  = sanitize_text_field( $parts[1] );
 			$add_lbl   = isset( $parts[2] ) && '' !== $parts[2] ? sanitize_text_field( $parts[2] ) : sprintf( __( 'Add New %s', BWS_TEXT_DOMAIN ), rtrim( $menu_lbl, 's' ) );
 			if ( $post_type && $menu_lbl ) {
