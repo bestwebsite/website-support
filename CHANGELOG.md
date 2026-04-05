@@ -16,6 +16,17 @@ Release tags are formatted as `vX.Y.Z`.
 
 ---
 
+## [1.0.6] - 2026-04-04
+### Added
+- Dashboard cleanup: added optional checkbox to remove WP Mail SMTP widget (`wp_mail_smtp_reports_widget_lite`).
+- Elementor-aware dashboard cleanup checkboxes (only shown when Elementor is active): remove “Elementor Overview” (`e-dashboard-overview`) and “Elementor Accessibility” (`e-dashboard-ally`).
+- Moved “Admin Notice CSS Selectors to Hide” setting to the Dashboard tab for better organization.
+
+### Fixed
+- Fixed a critical settings issue where saving on one tab would wipe/clear settings from other tabs by making settings sanitization tab-aware and merging with existing saved options.
+
+---
+
 ## [1.0.5] - 2026-04-04
 ### Added
 - Guardrails / drift documentation to reduce regressions during refactors and ensure required files, hooks, and settings keys remain consistent between releases.
