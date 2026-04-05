@@ -21,45 +21,6 @@ class BWS_Admin_Cleanup {
 		}
 	}
 
-	
-	private function get_notice_hide_selectors() {
-		$raw = (string) $this->settings->get( 'admin_notice_hide_selectors', '' );
-		if ( '' === trim( $raw ) ) {
-			return [];
-		}
-
-		$lines = preg_split( '/\r\n|\r|\n/', $raw );
-		$lines = array_slice( (array) $lines, 0, 50 );
-		$out   = [];
-
-		foreach ( $lines as $line ) {
-			$line = trim( (string) $line );
-			if ( '' === $line ) {
-				continue;
-			}
-
-			// Allow a shorthand: "class1 class2" -> ".class1.class2" (useful when copying class attributes).
-			if ( false !== strpos( $line, ' ' ) && false === strpbrk( $line, '.#[:>,' ) ) {
-				$parts = preg_split( '/\s+/', $line );
-				$parts = array_filter( array_map( 'sanitize_key', (array) $parts ) );
-				if ( ! empty( $parts ) ) {
-					$line = '.' . implode( '.', $parts );
-				}
-			}
-
-			// Basic allowlist to prevent breaking wp-admin output.
-			$line = preg_replace( '/[^A-Za-z0-9\s\#\.\-\_\>\:\[\]\=\"\'\(\)\,]/', '', $line );
-			$line = trim( preg_replace( '/\s+/', ' ', $line ) );
-			if ( '' === $line ) {
-				continue;
-			}
-
-			$out[] = $line;
-		}
-
-		return array_values( array_unique( $out ) );
-	}
-
 	public function admin_head_cleanup() {
 		if ( ! is_admin() ) {
 			return;
@@ -158,17 +119,33 @@ class BWS_Admin_Cleanup {
 			remove_submenu_page( 'themes.php', 'theme-install.php' );
 		}
 
-		$custom_top = preg_split( '/\r\n|\r|\n/', (string) $this->settings->get( 'menu_hide_custom_slugs', '' ) );
+		$custom_top = preg_split( '/
+||
+/', (string) $this->settings->get( 'menu_hide_custom_slugs', '' ) );
 		$custom_top = array_filter( array_map( 'trim', (array) $custom_top ) );
-		foreach ( $custom_top as $slug ) {
-			remove_menu_page( $slug );
-		}
+		foreach ( $custom_top as $raw_slug ) {
+			$slug = $this->normalize_menu_slug( $raw_slug );
+			if ( '' === $slug ) { continue; }
 
-		$custom_sub = preg_split( '/\r\n|\r|\n/', (string) $this->settings->get( 'submenu_hide_custom_slugs', '' ) );
+			remove_menu_page( $slug );
+
+			if ( $raw_slug !== $slug ) {
+				remove_menu_page( $raw_slug );
+			}
+		}
+$custom_sub = preg_split( '/\r\n|\r|\n/', (string) $this->settings->get( 'submenu_hide_custom_slugs', '' ) );
 		$custom_sub = array_filter( array_map( 'trim', (array) $custom_sub ) );
 		foreach ( $custom_sub as $line ) {
 			$parts = array_map( 'trim', explode( '|', $line ) );
 			if ( count( $parts ) >= 2 && $parts[0] && $parts[1] ) {
+				$parent = $this->normalize_menu_slug( $parts[0] );
+				$child  = $this->normalize_menu_slug( $parts[1] );
+
+				if ( '' !== $parent && '' !== $child ) {
+					remove_submenu_page( $parent, $child );
+				}
+
+				// Best-effort fallback in case the user already provided real slugs.
 				remove_submenu_page( $parts[0], $parts[1] );
 			}
 		}
@@ -233,3 +210,40 @@ class BWS_Admin_Cleanup {
 		return $actions;
 	}
 }
+	/**
+	 * Normalize user-provided menu identifiers to WordPress menu slugs.
+	 *
+	 * Users often paste DOM IDs like "toplevel_page_slug" or "menu-posts-cpt".
+	 * WordPress expects the underlying menu slug passed to add_menu_page()/remove_menu_page().
+	 */
+	private function normalize_menu_slug( $raw ) {
+		$s = trim( (string) $raw );
+		if ( '' === $s ) { return ''; }
+
+		if ( 0 === strpos( $s, 'toplevel_page_' ) ) {
+			$s = substr( $s, strlen( 'toplevel_page_' ) );
+		}
+
+		if ( 0 === strpos( $s, 'menu-posts-' ) ) {
+			$pt = substr( $s, strlen( 'menu-posts-' ) );
+			$pt = trim( $pt );
+			if ( '' !== $pt ) {
+				$s = ( 'post' === $pt ) ? 'edit.php' : 'edit.php?post_type=' . $pt;
+			}
+		}
+
+		if ( false !== strpos( $s, 'admin.php?page=' ) ) {
+			$parts = explode( 'admin.php?page=', $s, 2 );
+			$s = isset( $parts[1] ) ? $parts[1] : $s;
+		}
+		if ( false !== strpos( $s, '?page=' ) ) {
+			$parts = explode( '?page=', $s, 2 );
+			$s = isset( $parts[1] ) ? $parts[1] : $s;
+		}
+
+		$s = preg_replace( '/#.*/', '', $s );
+
+		return trim( $s );
+	}
+
+
