@@ -40,6 +40,7 @@ Release tags are formatted as `vX.Y.Z`.
 - Fixed fatal error: add missing admin notice CSS output method
 - Fixed: restore missing methods referenced by hooks (branding + dashboard)
 - Restored tabbed Settings UI (nav tabs + panels + settings-screen JS)
+- Fixed: settings save controls + notice selector handling + Elementor dashboard removal
 
 ---
 
