@@ -46,24 +46,6 @@ Release tags are formatted as `vX.Y.Z`.
 
 ---
 
-# Changelog
-All notable changes to **Best Website Support** will be documented in this file.
-
-This project follows **Semantic Versioning** (MAJOR.MINOR.PATCH).  
-Release tags are formatted as `vX.Y.Z`.
-
-## [Unreleased]
-### Added
-- TBD
-
-### Changed
-- TBD
-
-### Fixed
-- TBD
-
----
-
 ## [1.0.1] - 2026-04-01
 ### Added
 - Admin Notice cleanup: **Admin Notice CSS Selectors to Hide** (one CSS selector per line) to hide theme/plugin admin notices without hard-coding per-theme rules.
