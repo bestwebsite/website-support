@@ -1,4 +1,16 @@
+<p align="center">
+  <img src="https://raw.githubusercontent.com/bestwebsite/website-support/master/assets/social/website-support-banner.svg"
+       alt="Best Website Support — client admin cleanup, branding, and support tools for managed WordPress sites" />
+</p>
+
 # Best Website Support
+
+[![Latest release](https://img.shields.io/github/v/release/bestwebsite/website-support)](../../releases)
+[![Release date](https://img.shields.io/github/release-date/bestwebsite/website-support)](../../releases)
+[![License: GPL-2.0+](https://img.shields.io/badge/license-GPL--2.0%2B-blue.svg)](LICENSE)
+[![WordPress](https://img.shields.io/badge/WordPress-plugin-21759b.svg)](https://wordpress.org/)
+[![PHP](https://img.shields.io/badge/PHP-%3E%3D7.4-777bb4.svg)](https://www.php.net/)
+[![Maintained by Best Website](https://img.shields.io/badge/maintainer-Best%20Website-3AA0FF)](https://bestwebsite.com)
 
 **Best Website Support** is an internal WordPress plugin used by **Best Website** to streamline wp-admin for managed client sites, apply safe hardening defaults, and provide a clear, branded support pathway inside the dashboard.
 
