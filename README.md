@@ -12,72 +12,136 @@
 [![PHP](https://img.shields.io/badge/PHP-%3E%3D7.4-777bb4.svg)](https://www.php.net/)
 [![Maintained by Best Website](https://img.shields.io/badge/maintainer-Best%20Website-3AA0FF)](https://bestwebsite.com)
 
-**Best Website Support** is an internal WordPress plugin used by **Best Website** to streamline wp-admin for managed client sites, apply safe hardening defaults, and provide a clear, branded support pathway inside the dashboard.
-
-It focuses on:
-- reducing client-facing clutter and confusion
-- preventing risky actions (plugin/theme editors, installs, update screens, etc.)
-- adding a branded **Website Support** experience (dashboard widget + sidebar page)
-- applying safe security/performance defaults (optional + reversible)
-- maintaining consistent defaults across sites with per-site overrides
+**A professional WordPress support, admin experience, and site management plugin built for real-world client operations.**
 
 ---
 
-## Key Admin Pages
+## Why This Plugin Exists
 
-### Website Support (client-facing)
-- **Sidebar page:** `wp-admin/admin.php?page=bw-support`
-- **Dashboard widget:** shown on `wp-admin/index.php`
+Most WordPress sites become harder to manage over time:
 
-### Settings (admin-only)
-- **Settings page (UI):** `wp-admin/options-general.php?page=bw-settings`
-- If the settings menu link is hidden, the page remains accessible by direct URL above.
+- Admin dashboards get cluttered  
+- Clients get confused or overwhelmed  
+- Support requests come in through scattered channels  
+- Maintenance becomes reactive instead of proactive  
 
----
+**Best Website Support solves this.**
 
-## Features (high level)
-
-### Admin cleanup
-- Dashboard widget cleanup (core widgets + custom widget IDs)
-- Elementor-aware widget removals (Overview + Accessibility) when Elementor is active
-- Update UI cleanup (hide nags/badges/update rows; optionally hide Updates screen)
-- Restrictions (hide plugin/theme editors, installs, deletes, theme switching)
-- Menu cleanup + custom menu slug removal
-
-### Branding & Support
-- Replace admin footer text with Best Website branding
-- Branded Website Support dashboard widget and sidebar page
-- Support request form emails `support@bestwebsite.com` with optional diagnostics
-
-### Hardening & Performance (optional + reversible)
-- Force SSL for wp-admin when site uses HTTPS
-- Disable XML-RPC pingbacks, Application Passwords, author enumeration
-- Disable emojis, oEmbed discovery, Dashicons for visitors
-- Limit revisions (default 10)
-- Disable attachment pages (redirect to media file)
-- Disable comments site-wide (optional comment feed disable)
+It creates a clean, controlled, branded experience for clients while giving your team a centralized, scalable way to manage support and site operations.
 
 ---
 
-## GitHub Releases Updates
-This plugin supports updates from **GitHub Releases**.
+## What It Does
 
-Workflow:
-1. Update `CHANGELOG.md` with the new version heading.
-2. Push a new tag like `v1.0.7`.
-3. GitHub Actions validates hook callbacks, patches the plugin version, and builds `website-support.zip`.
-4. Client sites detect the update through the plugin updater (or WPRemote).
+### Clean, Controlled Admin Experience
+- Removes unnecessary clutter from the WordPress dashboard
+- Simplifies menus and UI for non-technical users
+- Reduces risk of accidental changes
+
+### Centralized Support System
+- Built-in support request form inside WordPress
+- Branded experience for your agency
+- Structured request capture (not vague emails)
+
+### Operational Consistency Across Sites
+- Standardized experience across all client sites
+- Easier onboarding and training
+- Predictable support workflows
+
+### Security & Hardening
+- Optional admin restrictions
+- Reduced exposure to risky UI/actions
+- Cleaner, safer client environments
+
+### GitHub-Based Updates
+- Version-controlled releases
+- Reliable update delivery
+- Scalable deployment across many sites
 
 ---
 
-## Support
-Best Website  
-https://bestwebsite.com  
-support@bestwebsite.com
+## Built for Agencies
 
+This plugin is not just a utility — it’s an **operational layer**.
 
-## Stability notes
-- Settings are cached per request to reduce repeated option lookups.
-- Structured multiline fields such as menu slugs, widget IDs, selector lists, and CPT label maps are sanitized with field-specific parsing instead of generic textarea sanitization.
-- Optional support email From overrides are scoped only to support-form sends.
-- The release workflow now validates hooked callbacks and blocks placeholder plugin versions from shipping.
+It helps agencies:
+- Deliver a better client experience
+- Reduce support chaos
+- Standardize environments across sites
+- Reinforce ongoing service value
+- Scale recurring revenue (MRR)
+
+---
+
+## Installation
+
+1. Upload the plugin to `/wp-content/plugins/`
+2. Activate in WordPress Admin
+3. Navigate to **Settings → Website Support**
+4. Configure options based on your workflow
+
+---
+
+## Key Features
+
+- Admin cleanup and UI control  
+- Support request system  
+- Branding customization  
+- Security and hardening tools  
+- GitHub updater integration  
+
+---
+
+## Real-World Use Case
+
+This plugin is actively used across managed client sites to:
+
+- Streamline WordPress admin experiences  
+- Route all support requests through a single system  
+- Maintain consistent environments across dozens of sites  
+- Support long-term client relationships and retainers  
+
+---
+
+## Development Standards
+
+- Namespaced under `BestWebsite`
+- WordPress best practices for:
+  - hooks
+  - sanitization
+  - performance
+- Designed for durability in production environments
+- Release process validated through real client deployments
+
+---
+
+## Roadmap
+
+This plugin is part of a larger long-term strategy.
+
+For upcoming features, product direction, and strategic vision:
+
+👉 See `docs/roadmap.md`
+
+---
+
+## Philosophy
+
+- Stability over shortcuts  
+- WordPress-native solutions over hacks  
+- Real-world testing before scaling  
+- Built for long-term maintainability  
+
+---
+
+## Changelog
+
+See `CHANGELOG.md`
+
+---
+
+## About Best Website
+
+Best Website is a long-term website partner for organizations that want their sites handled proactively — without needing in-house expertise.
+
+Learn more: https://bestwebsite.com
