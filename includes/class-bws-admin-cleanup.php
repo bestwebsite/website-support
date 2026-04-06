@@ -11,6 +11,7 @@ class BWS_Admin_Cleanup {
 		add_action( 'admin_head', [ $this, 'admin_head_cleanup' ], 1 );
 		add_action( 'admin_menu', [ $this, 'cleanup_admin_menus' ], 999 );
 		add_action( 'admin_init', [ $this, 'restrict_admin_pages' ] );
+		add_action( 'admin_init', [ $this, 'maybe_disable_update_ui' ], 1 );
 		add_filter( 'all_plugins', [ $this, 'filter_plugins_list_actions' ] );
 		add_filter( 'plugin_action_links', [ $this, 'filter_plugin_action_links' ], 10, 4 );
 		add_filter( 'theme_action_links', [ $this, 'filter_theme_action_links' ], 10, 2 );
