@@ -7,14 +7,14 @@
  * Author URI: https://bestwebsite.com
  * Text Domain: bw-support
  * Domain Path: /languages
- * Version: 0.0.0
+ * Version: 1.0.7
  */
 
 if ( ! defined( 'ABSPATH' ) ) {
 	exit;
 }
 
-define( 'BWS_VERSION', '0.0.0' ); // Patched by release workflow from tag vX.Y.Z.
+define( 'BWS_VERSION', '1.0.7' );
 define( 'BWS_GITHUB_OWNER', 'bestwebsite' );
 define( 'BWS_GITHUB_REPO', 'website-support' );
 
@@ -29,6 +29,7 @@ define( 'BWS_SUPPORT_PAGE_SLUG', 'bw-support' );
 
 define( 'BWS_PLUGIN_BASENAME', plugin_basename( __FILE__ ) );
 
+require_once BWS_PLUGIN_DIR . 'includes/class-bws-utils.php';
 require_once BWS_PLUGIN_DIR . 'includes/class-bws-settings.php';
 require_once BWS_PLUGIN_DIR . 'includes/class-bws-github-updater.php';
 require_once BWS_PLUGIN_DIR . 'includes/class-bws-plugin.php';
@@ -41,11 +42,15 @@ require_once BWS_PLUGIN_DIR . 'includes/class-bws-menu-labels.php';
 require_once BWS_PLUGIN_DIR . 'includes/class-bws-whitelabel.php';
 require_once BWS_PLUGIN_DIR . 'includes/class-bws-hardening.php';
 
-add_action( 'plugins_loaded', function() {
-	load_plugin_textdomain( BWS_TEXT_DOMAIN, false, dirname( BWS_PLUGIN_BASENAME ) . '/languages' );
+add_action(
+	'plugins_loaded',
+	function() {
+		load_plugin_textdomain( BWS_TEXT_DOMAIN, false, dirname( BWS_PLUGIN_BASENAME ) . '/languages' );
 
-	BWS_Plugin::instance();
+		BWS_Plugin::instance();
 
-	// Enable GitHub-based updates (public repo releases).
-	new BWS_GitHub_Updater( BWS_GITHUB_OWNER, BWS_GITHUB_REPO, BWS_PLUGIN_FILE );
-} );
+		if ( is_admin() || wp_doing_cron() ) {
+			new BWS_GitHub_Updater( BWS_GITHUB_OWNER, BWS_GITHUB_REPO, BWS_PLUGIN_FILE );
+		}
+	}
+);

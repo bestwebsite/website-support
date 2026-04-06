@@ -16,6 +16,25 @@ Release tags are formatted as `vX.Y.Z`.
 
 ---
 
+## [1.0.7] - 2026-04-06
+### Changed
+- Refactored settings handling to cache plugin options per request and use field-specific sanitization for multiline configuration values.
+- Tightened the support tool so access defaults to `edit_posts` via a filterable capability instead of exposing it to every logged-in `read` user.
+- Scoped optional support-email From overrides to support-form sends only, instead of applying global mail filters site-wide.
+- Hardened admin SSL redirects to use WordPress URL helpers and temporary redirects for safer behavior behind common environments.
+- Improved the GitHub updater with failure backoff caching, richer plugin information, and stronger release ZIP validation.
+- Added reusable utility helpers for safe CSS selector handling and structured multiline setting parsing.
+
+### Fixed
+- Added the missing `maybe_disable_update_ui()` callback implementation in admin cleanup.
+- Added the missing `disable_comment_feed()` callback implementation in hardening.
+- Fixed remaining CSS-output issues by generating sanitized inline CSS without escaping selectors into invalid markup.
+- Improved update UI cleanup by removing the admin bar Updates node and the Plugins "Update Available" view when those options are enabled.
+- Set the shipped plugin version to `1.0.7` instead of `0.0.0` and added release-workflow guards to prevent placeholder versions from shipping again.
+- Added a release-time hook callback validator to catch missing hooked methods before packaging.
+
+---
+
 ## [1.0.6] - 2026-04-05
 ### Added
 - New **Hardening & Performance** settings tab with practical security/performance toggles:

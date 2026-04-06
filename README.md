@@ -63,9 +63,10 @@ It focuses on:
 This plugin supports updates from **GitHub Releases**.
 
 Workflow:
-1. Push a new tag like `v1.0.6`
-2. GitHub Actions builds and attaches `website-support.zip`
-3. Client sites detect the update through the plugin updater (or WPRemote)
+1. Update `CHANGELOG.md` with the new version heading.
+2. Push a new tag like `v1.0.7`.
+3. GitHub Actions validates hook callbacks, patches the plugin version, and builds `website-support.zip`.
+4. Client sites detect the update through the plugin updater (or WPRemote).
 
 ---
 
@@ -73,3 +74,10 @@ Workflow:
 Best Website  
 https://bestwebsite.com  
 support@bestwebsite.com
+
+
+## Stability notes
+- Settings are cached per request to reduce repeated option lookups.
+- Structured multiline fields such as menu slugs, widget IDs, selector lists, and CPT label maps are sanitized with field-specific parsing instead of generic textarea sanitization.
+- Optional support email From overrides are scoped only to support-form sends.
+- The release workflow now validates hooked callbacks and blocks placeholder plugin versions from shipping.

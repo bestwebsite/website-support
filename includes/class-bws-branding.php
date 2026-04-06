@@ -43,53 +43,8 @@ class BWS_Branding {
 			return;
 		}
 
-		$lines = preg_split( '/\r\n|\r|\n/', $raw );
-		$lines = is_array( $lines ) ? $lines : [];
-
-		$selectors = [];
-		foreach ( $lines as $line ) {
-			$sel = trim( (string) $line );
-			if ( '' === $sel ) {
-				continue;
-			}
-
-			// Basic hardening: strip characters that can break CSS/style tag.
-			$sel = str_replace( [ '{', '}', ';', '<', '>' ], '', $sel );
-			$sel = preg_replace( '/[\x00-\x1F\x7F]/u', '', $sel );
-			$sel = trim( $sel );
-			if ( '' === $sel ) {
-				continue;
-			}
-
-			// Shorthand: if user pasted a space-delimited class list, convert to .a.b.c
-			if ( false === strpos( $sel, '.' ) && false === strpos( $sel, '#' ) && preg_match( '/^[A-Za-z0-9_\- ]+$/', $sel ) ) {
-				$parts = array_values( array_filter( array_map( 'trim', preg_split( '/\s+/', $sel ) ) ) );
-				if ( count( $parts ) >= 2 ) {
-					$sel = '.' . implode( '.', $parts );
-				}
-			}
-
-			if ( strlen( $sel ) > 200 ) {
-				$sel = substr( $sel, 0, 200 );
-			}
-
-			$selectors[] = $sel;
-			if ( count( $selectors ) >= 75 ) {
-				break;
-			}
-		}
-
-		if ( empty( $selectors ) ) {
-			return;
-		}
-
-		$css_rules = [];
-		foreach ( $selectors as $sel ) {
-			$css_rules[] = $sel . '{display:none !important;visibility:hidden !important;}';
-		}
-
-		echo "\n" . '<style id="bws-admin-notice-hide-css">' . "\n";
-		echo implode( "\n", $css_rules ) . "\n";
-		echo "</style>\n";
+		$selectors = preg_split( '/\r\n|\r|\n/', $raw );
+		$selectors = is_array( $selectors ) ? $selectors : [];
+		echo str_replace( 'bws-inline-hide-css', 'bws-admin-notice-hide-css', BWS_Utils::build_hide_css( $selectors, 'display:none !important;visibility:hidden !important;' ) );
 	}
 }

@@ -8,6 +8,7 @@ class BWS_Admin_Cleanup {
 
 	public function __construct( BWS_Settings $settings ) {
 		$this->settings = $settings;
+
 		add_action( 'admin_head', [ $this, 'admin_head_cleanup' ], 1 );
 		add_action( 'admin_menu', [ $this, 'cleanup_admin_menus' ], 999 );
 		add_action( 'admin_init', [ $this, 'restrict_admin_pages' ] );
@@ -22,13 +23,47 @@ class BWS_Admin_Cleanup {
 		}
 	}
 
-	public function admin_head_cleanup() {
-		if ( ! is_admin() ) {
+	private function can_restrict_admin() {
+		return is_admin() && current_user_can( 'manage_options' );
+	}
+
+	public function maybe_disable_update_ui() {
+		if ( ! $this->can_restrict_admin() ) {
 			return;
 		}
 
 		if ( $this->settings->get( 'updates_hide_nag', 1 ) ) {
 			remove_action( 'admin_notices', 'update_nag', 3 );
+		}
+
+		if ( $this->settings->get( 'updates_hide_badges', 1 ) ) {
+			add_action( 'admin_bar_menu', [ $this, 'remove_updates_admin_bar_node' ], 999 );
+		}
+
+		if ( $this->settings->get( 'updates_hide_plugin_update_tab', 1 ) ) {
+			add_filter( 'views_plugins', [ $this, 'filter_plugin_views' ] );
+		}
+	}
+
+	public function remove_updates_admin_bar_node( $wp_admin_bar ) {
+		if ( ! is_object( $wp_admin_bar ) ) {
+			return;
+		}
+
+		$wp_admin_bar->remove_node( 'updates' );
+	}
+
+	public function filter_plugin_views( $views ) {
+		if ( isset( $views['upgrade'] ) ) {
+			unset( $views['upgrade'] );
+		}
+
+		return $views;
+	}
+
+	public function admin_head_cleanup() {
+		if ( ! $this->can_restrict_admin() ) {
+			return;
 		}
 
 		$selectors = [];
@@ -37,18 +72,20 @@ class BWS_Admin_Cleanup {
 			$selectors[] = '.plugins .plugin-update-tr';
 			$selectors[] = '.plugins .update-message';
 		}
+
 		if ( $this->settings->get( 'updates_hide_badges', 1 ) ) {
-			$selectors[] = '#wp-admin-bar-updates';
 			$selectors[] = '.wp-menu-name .update-plugins';
 			$selectors[] = '.update-plugins';
 			$selectors[] = '.plugin-count';
 			$selectors[] = '.update-count';
 		}
+
 		if ( $this->settings->get( 'updates_hide_auto_update_column', 1 ) ) {
 			$selectors[] = '.plugins .column-auto-updates';
 			$selectors[] = 'th#auto-updates';
 			$selectors[] = 'td.column-auto-updates';
 		}
+
 		if ( $this->settings->get( 'updates_hide_plugin_update_tab', 1 ) ) {
 			$selectors[] = '.subsubsub a[href*="plugin_status=upgrade"]';
 		}
@@ -58,32 +95,58 @@ class BWS_Admin_Cleanup {
 		}
 
 		if ( $this->settings->get( 'restrict_plugin_install', 1 ) ) {
-			$selectors[] = '#menu-plugins .wp-submenu a[href="plugin-install.php"]';
 			$selectors[] = 'a.page-title-action[href*="plugin-install.php"]';
-			$selectors[] = '.plugins-php .page-title-action';
-		}
-
-		if ( $this->settings->get( 'restrict_theme_switch', 1 ) ) {
-			$selectors[] = '#menu-appearance .wp-submenu a[href="themes.php"]';
 		}
 
 		if ( $this->settings->get( 'restrict_theme_install', 1 ) ) {
-			$selectors[] = '#menu-appearance .wp-submenu a[href="theme-install.php"]';
 			$selectors[] = 'a.page-title-action[href*="theme-install.php"]';
 			$selectors[] = '.theme-browser .page-title-action';
 		}
 
-		if ( $this->settings->get( 'restrict_updates_page', 1 ) ) {
-			$selectors[] = '#menu-dashboard .wp-submenu a[href="update-core.php"]';
+		echo BWS_Utils::build_hide_css( array_unique( $selectors ) );
+	}
+
+	private function normalize_top_level_menu_slug( $slug ) {
+		$slug = trim( (string) $slug );
+		if ( '' === $slug ) {
+			return '';
 		}
 
-		if ( ! empty( $selectors ) ) {
-			echo '<style>' . esc_html( implode( ',', array_unique( $selectors ) ) ) . '{display:none!important;}</style>';
+		if ( 0 === strpos( $slug, 'menu-posts-' ) ) {
+			$post_type = sanitize_key( substr( $slug, strlen( 'menu-posts-' ) ) );
+			return '' !== $post_type ? 'edit.php?post_type=' . $post_type : '';
+		}
+
+		if ( 0 === strpos( $slug, 'toplevel_page_' ) ) {
+			$slug = trim( substr( $slug, strlen( 'toplevel_page_' ) ) );
+		}
+
+		switch ( $slug ) {
+			case 'menu-media':
+				return 'upload.php';
+			case 'menu-pages':
+				return 'edit.php?post_type=page';
+			case 'menu-posts':
+				return 'edit.php';
+			case 'menu-comments':
+				return 'edit-comments.php';
+			case 'menu-appearance':
+				return 'themes.php';
+			case 'menu-plugins':
+				return 'plugins.php';
+			case 'menu-users':
+				return 'users.php';
+			case 'menu-tools':
+				return 'tools.php';
+			case 'menu-settings':
+				return 'options-general.php';
+			default:
+				return $slug;
 		}
 	}
 
 	public function cleanup_admin_menus() {
-		if ( ! current_user_can( 'manage_options' ) ) {
+		if ( ! $this->can_restrict_admin() ) {
 			return;
 		}
 
@@ -121,116 +184,62 @@ class BWS_Admin_Cleanup {
 		}
 
 		$custom_top = preg_split( '/\r\n|\r|\n/', (string) $this->settings->get( 'menu_hide_custom_slugs', '' ) );
-		$custom_top = array_filter( array_map( 'trim', (array) $custom_top ) );
-		foreach ( $custom_top as $slug ) {
-			$slug = (string) $slug;
-			$slug = trim( $slug );
-			if ( '' === $slug ) {
-				continue;
+		foreach ( array_filter( array_map( 'trim', (array) $custom_top ) ) as $slug ) {
+			$slug = $this->normalize_top_level_menu_slug( $slug );
+			if ( '' !== $slug ) {
+				remove_menu_page( $slug );
 			}
-
-			// Support common WP admin menu DOM IDs (e.g. menu-posts-team) by mapping to real slugs.
-			// WP expects slugs like "edit.php?post_type=team" for CPT menus.
-			if ( 0 === strpos( $slug, 'menu-posts-' ) ) {
-				$post_type = substr( $slug, strlen( 'menu-posts-' ) );
-				$post_type = sanitize_key( $post_type );
-				if ( '' !== $post_type ) {
-					remove_menu_page( 'edit.php?post_type=' . $post_type );
-					continue;
-				}
-			}
-
-			// Some plugins/themes expose top-level menu IDs like "toplevel_page_plugin-slug".
-			// WordPress expects the actual menu slug (often the portion after the prefix).
-			if ( 0 === strpos( $slug, 'toplevel_page_' ) ) {
-				$maybe = substr( $slug, strlen( 'toplevel_page_' ) );
-				$maybe = trim( $maybe );
-				if ( '' !== $maybe ) {
-					remove_menu_page( $maybe );
-					continue;
-				}
-			}
-
-			// A few helpful built-in menu ID shorthands.
-			switch ( $slug ) {
-				case 'menu-media':
-					remove_menu_page( 'upload.php' );
-					continue 2;
-				case 'menu-pages':
-					remove_menu_page( 'edit.php?post_type=page' );
-					continue 2;
-				case 'menu-posts':
-					remove_menu_page( 'edit.php' );
-					continue 2;
-				case 'menu-comments':
-					remove_menu_page( 'edit-comments.php' );
-					continue 2;
-				case 'menu-appearance':
-					remove_menu_page( 'themes.php' );
-					continue 2;
-				case 'menu-plugins':
-					remove_menu_page( 'plugins.php' );
-					continue 2;
-				case 'menu-users':
-					remove_menu_page( 'users.php' );
-					continue 2;
-				case 'menu-tools':
-					remove_menu_page( 'tools.php' );
-					continue 2;
-				case 'menu-settings':
-					remove_menu_page( 'options-general.php' );
-					continue 2;
-			}
-
-			// Default: treat value as an actual menu slug.
-			remove_menu_page( $slug );
 		}
 
 		$custom_sub = preg_split( '/\r\n|\r|\n/', (string) $this->settings->get( 'submenu_hide_custom_slugs', '' ) );
-		$custom_sub = array_filter( array_map( 'trim', (array) $custom_sub ) );
-		foreach ( $custom_sub as $line ) {
+		foreach ( array_filter( array_map( 'trim', (array) $custom_sub ) ) as $line ) {
 			$parts = array_map( 'trim', explode( '|', $line ) );
-			if ( count( $parts ) >= 2 && $parts[0] && $parts[1] ) {
+			if ( count( $parts ) >= 2 && '' !== $parts[0] && '' !== $parts[1] ) {
 				remove_submenu_page( $parts[0], $parts[1] );
 			}
 		}
 	}
 
 	public function restrict_admin_pages() {
-		if ( ! is_admin() || ! current_user_can( 'manage_options' ) ) {
+		if ( ! $this->can_restrict_admin() ) {
 			return;
 		}
 
 		global $pagenow;
 
 		if ( $this->settings->get( 'restrict_plugin_editor', 1 ) && 'plugin-editor.php' === $pagenow ) {
-			wp_safe_redirect( admin_url() ); exit;
+			wp_safe_redirect( admin_url() );
+			exit;
 		}
 		if ( $this->settings->get( 'restrict_theme_editor', 1 ) && 'theme-editor.php' === $pagenow ) {
-			wp_safe_redirect( admin_url() ); exit;
+			wp_safe_redirect( admin_url() );
+			exit;
 		}
 		if ( $this->settings->get( 'restrict_plugin_install', 1 ) && in_array( $pagenow, [ 'plugin-install.php', 'update.php' ], true ) ) {
 			$action = isset( $_GET['action'] ) ? sanitize_key( wp_unslash( $_GET['action'] ) ) : '';
 			if ( in_array( $action, [ 'upload-plugin', 'install-plugin' ], true ) || 'plugin-install.php' === $pagenow ) {
-				wp_safe_redirect( admin_url( 'plugins.php' ) ); exit;
+				wp_safe_redirect( admin_url( 'plugins.php' ) );
+				exit;
 			}
 		}
 		if ( $this->settings->get( 'restrict_theme_install', 1 ) && in_array( $pagenow, [ 'theme-install.php', 'update.php' ], true ) ) {
 			$action = isset( $_GET['action'] ) ? sanitize_key( wp_unslash( $_GET['action'] ) ) : '';
 			if ( in_array( $action, [ 'upload-theme', 'install-theme' ], true ) || 'theme-install.php' === $pagenow ) {
-				wp_safe_redirect( admin_url( 'themes.php' ) ); exit;
+				wp_safe_redirect( admin_url( 'themes.php' ) );
+				exit;
 			}
 		}
 		if ( $this->settings->get( 'restrict_theme_switch', 1 ) && in_array( $pagenow, [ 'themes.php', 'customize.php' ], true ) ) {
-			wp_safe_redirect( admin_url() ); exit;
+			wp_safe_redirect( admin_url() );
+			exit;
 		}
 		if ( $this->settings->get( 'restrict_updates_page', 1 ) && 'update-core.php' === $pagenow ) {
-			wp_safe_redirect( admin_url() ); exit;
+			wp_safe_redirect( admin_url() );
+			exit;
 		}
 	}
 
 	public function filter_plugins_list_actions( $all_plugins ) {
-		// Placeholder hook kept to support future per-plugin cleanup; no mutation here.
 		return $all_plugins;
 	}
 
@@ -238,20 +247,19 @@ class BWS_Admin_Cleanup {
 		if ( $this->settings->get( 'restrict_plugin_delete', 1 ) && isset( $actions['delete'] ) ) {
 			unset( $actions['delete'] );
 		}
-		if ( $this->settings->get( 'restrict_plugin_install', 1 ) && isset( $actions['activate'] ) ) {
-			// leave activate; no-op.
-		}
+
 		return $actions;
 	}
 
 	public function filter_theme_action_links( $actions, $theme ) {
 		if ( $this->settings->get( 'restrict_theme_switch', 1 ) ) {
-			foreach ( [ 'activate', 'live-preview' ] as $k ) {
-				if ( isset( $actions[ $k ] ) ) {
-					unset( $actions[ $k ] );
+			foreach ( [ 'activate', 'live-preview' ] as $key ) {
+				if ( isset( $actions[ $key ] ) ) {
+					unset( $actions[ $key ] );
 				}
 			}
 		}
+
 		return $actions;
 	}
 }

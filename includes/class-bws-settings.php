@@ -4,6 +4,7 @@ if ( ! defined( 'ABSPATH' ) ) {
 }
 
 class BWS_Settings {
+	private $settings_cache = null;
 
 	public function get_defaults() {
 		return [
@@ -24,7 +25,7 @@ class BWS_Settings {
 			'updates_hide_nag'                       => 1,
 			'updates_hide_plugin_rows'               => 1,
 			'updates_hide_badges'                    => 1,
-			'updates_hide_auto_update_column'        => 1, // also disables auto-updates via filters in admin cleanup
+			'updates_hide_auto_update_column'        => 1,
 			'updates_hide_plugin_update_tab'         => 1,
 			'restrict_updates_page'                  => 1,
 
@@ -48,7 +49,8 @@ class BWS_Settings {
 			'label_posts'                            => '',
 			'label_pages'                            => '',
 			'label_media'                            => '',
-			'label_cpt_map'                          => "# Format: post_type|Menu Label|Add New Label\n# Example: event-item|Events|Add New Event",
+			'label_cpt_map'                          => "# Format: post_type|Menu Label|Add New Label
+# Example: event-item|Events|Add New Event",
 
 			// Branding
 			'branding_footer_enabled'                => 1,
@@ -63,11 +65,15 @@ class BWS_Settings {
 			'support_page_enabled'                   => 1,
 			'support_page_label'                     => 'Website Support',
 			'support_email'                          => 'support@bestwebsite.com',
-			'support_topic_options'                  => "Technical Support\nContent Update Request\nSEO / Marketing Question\nWebsite Change Request\nOther",
+			'support_topic_options'                  => "Technical Support
+Content Update Request
+SEO / Marketing Question
+Website Change Request
+Other",
 			'support_success_message'                => 'Thanks! Your message has been sent to Best Website Support.',
 			'support_instructions_text'              => 'Please share as much detail as possible, including page URLs and what you expected to happen.',
 			'support_include_diagnostics'            => 1,
-			'support_force_from_domain'              => 0, // optional; skipped if WP Mail SMTP active
+			'support_force_from_domain'              => 0,
 
 			// Login
 			'login_branding_enabled'                 => 1,
@@ -88,34 +94,41 @@ class BWS_Settings {
 			// Hardening & Performance
 			'comments_disable_sitewide'              => 1,
 			'comments_disable_feeds'                 => 0,
-
 			'security_disable_xmlrpc_pingbacks'      => 1,
 			'security_disable_application_passwords' => 1,
 			'security_block_author_enum'             => 1,
 			'security_remove_generator'              => 1,
 			'security_force_ssl_admin'               => 1,
-
 			'perf_disable_emojis'                    => 1,
 			'perf_disable_oembed'                    => 1,
 			'perf_disable_dashicons_visitors'        => 1,
 			'perf_limit_revisions_enabled'           => 1,
 			'perf_limit_revisions_count'             => 10,
-
 			'seo_disable_attachment_pages'           => 1,
 		];
 	}
 
 	public function get_all() {
+		if ( null !== $this->settings_cache ) {
+			return $this->settings_cache;
+		}
+
 		$saved = get_option( BWS_OPTION_KEY, [] );
 		if ( ! is_array( $saved ) ) {
 			$saved = [];
 		}
-		return wp_parse_args( $saved, $this->get_defaults() );
+
+		$this->settings_cache = wp_parse_args( $saved, $this->get_defaults() );
+		return $this->settings_cache;
 	}
 
 	public function get( $key, $default = null ) {
 		$all = $this->get_all();
 		return array_key_exists( $key, $all ) ? $all[ $key ] : $default;
+	}
+
+	public function clear_cache() {
+		$this->settings_cache = null;
 	}
 
 	public function register_settings() {
@@ -128,6 +141,65 @@ class BWS_Settings {
 				'default'           => $this->get_defaults(),
 			]
 		);
+	}
+
+	private function sanitize_plain_multiline( $value, $max_lines = 100, $max_line_length = 250 ) {
+		return BWS_Utils::sanitize_plain_multiline( $value, $max_lines, $max_line_length );
+	}
+
+	private function sanitize_topics( $value ) {
+		return $this->sanitize_plain_multiline( $value, 25, 120 );
+	}
+
+	private function sanitize_cpt_map( $value ) {
+		$lines   = explode( "
+", BWS_Utils::normalize_newlines( wp_unslash( (string) $value ) ) );
+		$output  = [];
+		$counter = 0;
+
+		foreach ( $lines as $line ) {
+			if ( $counter >= 100 ) {
+				break;
+			}
+
+			$line = trim( (string) $line );
+			if ( '' === $line ) {
+				continue;
+			}
+
+			if ( '#' === substr( $line, 0, 1 ) ) {
+				$output[] = $line;
+				$counter++;
+				continue;
+			}
+
+			$parts = array_map( 'trim', explode( '|', wp_strip_all_tags( $line, true ) ) );
+			if ( count( $parts ) < 2 ) {
+				continue;
+			}
+
+			$key = (string) $parts[0];
+			if ( 0 === strpos( $key, 'menu-posts-' ) ) {
+				$key = substr( $key, strlen( 'menu-posts-' ) );
+			}
+			if ( 0 === strpos( $key, 'edit.php?post_type=' ) ) {
+				$key = substr( $key, strlen( 'edit.php?post_type=' ) );
+			}
+
+			$key      = sanitize_key( $key );
+			$menu     = sanitize_text_field( $parts[1] );
+			$add_new  = isset( $parts[2] ) ? sanitize_text_field( $parts[2] ) : '';
+
+			if ( '' === $key || '' === $menu ) {
+				continue;
+			}
+
+			$output[] = $key . '|' . $menu . '|' . ( '' !== $add_new ? $add_new : sprintf( __( 'Add New %s', BWS_TEXT_DOMAIN ), rtrim( $menu, 's' ) ) );
+			$counter++;
+		}
+
+		return implode( "
+", $output );
 	}
 
 	public function sanitize_settings( $input ) {
@@ -145,14 +217,12 @@ class BWS_Settings {
 			'dashboard_remove_wp_mail_smtp_widget',
 			'dashboard_remove_elementor_overview',
 			'dashboard_remove_elementor_ally',
-
 			'updates_hide_nag',
 			'updates_hide_plugin_rows',
 			'updates_hide_badges',
 			'updates_hide_auto_update_column',
 			'updates_hide_plugin_update_tab',
 			'restrict_updates_page',
-
 			'restrict_plugin_editor',
 			'restrict_theme_editor',
 			'restrict_plugin_install',
@@ -165,34 +235,28 @@ class BWS_Settings {
 			'menu_hide_users',
 			'menu_hide_plugins',
 			'menu_hide_appearance',
-
 			'branding_footer_enabled',
 			'support_widget_enabled',
 			'support_page_enabled',
 			'support_include_diagnostics',
 			'support_force_from_domain',
 			'login_branding_enabled',
-
 			'plugin_whitelabel_enabled',
 			'plugin_hide_settings_menu',
 			'plugin_hide_from_plugins_list',
 			'plugin_hide_plugin_ui_badges',
 			'plugin_hide_support_menu_from_adminbar',
-
 			'comments_disable_sitewide',
 			'comments_disable_feeds',
-
 			'security_disable_xmlrpc_pingbacks',
 			'security_disable_application_passwords',
 			'security_block_author_enum',
 			'security_remove_generator',
 			'security_force_ssl_admin',
-
 			'perf_disable_emojis',
 			'perf_disable_oembed',
 			'perf_disable_dashicons_visitors',
 			'perf_limit_revisions_enabled',
-
 			'seo_disable_attachment_pages',
 		];
 
@@ -200,70 +264,46 @@ class BWS_Settings {
 			$output[ $key ] = ! empty( $input[ $key ] ) ? 1 : 0;
 		}
 
-		$text_keys = [
-			'menu_hide_custom_slugs',
-			'submenu_hide_custom_slugs',
-			'label_posts',
-			'label_pages',
-			'label_media',
-			'label_cpt_map',
-			'branding_footer_text',
-			'branding_footer_version_text',
-			'branding_support_logo_url',
-			'branding_support_widget_intro',
-			'branding_support_page_intro',
-			'support_page_label',
-			'support_email',
-			'support_topic_options',
-			'support_success_message',
-			'support_instructions_text',
-			'login_logo_url',
-			'login_logo_link_url',
-			'login_logo_title',
-			'login_bg_color',
-			'login_button_color',
-			'login_help_text',
-			'dashboard_remove_custom_widget_ids',
-			'admin_notice_hide_selectors',
-		];
+		$output['menu_hide_custom_slugs']             = BWS_Utils::sanitize_menu_slug_list( $input['menu_hide_custom_slugs'] ?? $defaults['menu_hide_custom_slugs'] );
+		$output['submenu_hide_custom_slugs']          = BWS_Utils::sanitize_submenu_map( $input['submenu_hide_custom_slugs'] ?? $defaults['submenu_hide_custom_slugs'] );
+		$output['label_posts']                        = sanitize_text_field( $input['label_posts'] ?? $defaults['label_posts'] );
+		$output['label_pages']                        = sanitize_text_field( $input['label_pages'] ?? $defaults['label_pages'] );
+		$output['label_media']                        = sanitize_text_field( $input['label_media'] ?? $defaults['label_media'] );
+		$output['label_cpt_map']                      = $this->sanitize_cpt_map( $input['label_cpt_map'] ?? $defaults['label_cpt_map'] );
+		$output['branding_footer_text']               = sanitize_text_field( $input['branding_footer_text'] ?? $defaults['branding_footer_text'] );
+		$output['branding_footer_version_text']       = sanitize_text_field( $input['branding_footer_version_text'] ?? $defaults['branding_footer_version_text'] );
+		$output['branding_support_logo_url']          = esc_url_raw( $input['branding_support_logo_url'] ?? $defaults['branding_support_logo_url'] );
+		$output['branding_support_widget_intro']      = sanitize_text_field( $input['branding_support_widget_intro'] ?? $defaults['branding_support_widget_intro'] );
+		$output['branding_support_page_intro']        = sanitize_text_field( $input['branding_support_page_intro'] ?? $defaults['branding_support_page_intro'] );
+		$output['support_page_label']                 = sanitize_text_field( $input['support_page_label'] ?? $defaults['support_page_label'] );
+		$output['support_email']                      = sanitize_email( $input['support_email'] ?? $defaults['support_email'] );
+		$output['support_topic_options']              = $this->sanitize_topics( $input['support_topic_options'] ?? $defaults['support_topic_options'] );
+		$output['support_success_message']            = sanitize_text_field( $input['support_success_message'] ?? $defaults['support_success_message'] );
+		$output['support_instructions_text']          = $this->sanitize_plain_multiline( $input['support_instructions_text'] ?? $defaults['support_instructions_text'], 10, 200 );
+		$output['login_logo_url']                     = esc_url_raw( $input['login_logo_url'] ?? $defaults['login_logo_url'] );
+		$output['login_logo_link_url']                = esc_url_raw( $input['login_logo_link_url'] ?? $defaults['login_logo_link_url'] );
+		$output['login_logo_title']                   = sanitize_text_field( $input['login_logo_title'] ?? $defaults['login_logo_title'] );
+		$output['login_bg_color']                     = sanitize_hex_color( $input['login_bg_color'] ?? '' );
+		$output['login_button_color']                 = sanitize_hex_color( $input['login_button_color'] ?? '' );
+		$output['login_help_text']                    = $this->sanitize_plain_multiline( $input['login_help_text'] ?? $defaults['login_help_text'], 5, 200 );
+		$output['dashboard_remove_custom_widget_ids'] = BWS_Utils::sanitize_dashboard_widget_ids( $input['dashboard_remove_custom_widget_ids'] ?? $defaults['dashboard_remove_custom_widget_ids'] );
+		$output['admin_notice_hide_selectors']        = BWS_Utils::sanitize_css_selector_list( $input['admin_notice_hide_selectors'] ?? $defaults['admin_notice_hide_selectors'] );
+		$output['perf_limit_revisions_count']         = isset( $input['perf_limit_revisions_count'] ) ? max( 0, (int) $input['perf_limit_revisions_count'] ) : (int) $defaults['perf_limit_revisions_count'];
 
-		foreach ( $text_keys as $key ) {
-			$output[ $key ] = isset( $input[ $key ] ) ? (string) $input[ $key ] : ( $defaults[ $key ] ?? '' );
+		if ( empty( $output['support_email'] ) || ! is_email( $output['support_email'] ) ) {
+			$output['support_email'] = $defaults['support_email'];
 		}
 
-		// sanitize
-		$output['menu_hide_custom_slugs']        = sanitize_textarea_field( $output['menu_hide_custom_slugs'] );
-		$output['submenu_hide_custom_slugs']     = sanitize_textarea_field( $output['submenu_hide_custom_slugs'] );
-		$output['label_posts']                   = sanitize_text_field( $output['label_posts'] );
-		$output['label_pages']                   = sanitize_text_field( $output['label_pages'] );
-		$output['label_media']                   = sanitize_text_field( $output['label_media'] );
-		$output['label_cpt_map']                 = sanitize_textarea_field( $output['label_cpt_map'] );
+		if ( empty( $output['login_bg_color'] ) ) {
+			$output['login_bg_color'] = $defaults['login_bg_color'];
+		}
 
-		$output['branding_footer_text']          = sanitize_text_field( $output['branding_footer_text'] );
-		$output['branding_footer_version_text']  = sanitize_text_field( $output['branding_footer_version_text'] );
-		$output['branding_support_logo_url']     = esc_url_raw( $output['branding_support_logo_url'] );
-		$output['branding_support_widget_intro'] = sanitize_text_field( $output['branding_support_widget_intro'] );
-		$output['branding_support_page_intro']   = sanitize_text_field( $output['branding_support_page_intro'] );
+		if ( empty( $output['login_button_color'] ) ) {
+			$output['login_button_color'] = $defaults['login_button_color'];
+		}
 
-		$output['support_page_label']            = sanitize_text_field( $output['support_page_label'] );
-		$output['support_email']                 = sanitize_email( $output['support_email'] );
-		$output['support_topic_options']         = sanitize_textarea_field( $output['support_topic_options'] );
-		$output['support_success_message']       = sanitize_text_field( $output['support_success_message'] );
-		$output['support_instructions_text']     = sanitize_textarea_field( $output['support_instructions_text'] );
-
-		$output['login_logo_url']                = esc_url_raw( $output['login_logo_url'] );
-		$output['login_logo_link_url']           = esc_url_raw( $output['login_logo_link_url'] );
-		$output['login_logo_title']              = sanitize_text_field( $output['login_logo_title'] );
-		$output['login_bg_color']                = sanitize_text_field( $output['login_bg_color'] );
-		$output['login_button_color']            = sanitize_text_field( $output['login_button_color'] );
-		$output['login_help_text']               = sanitize_textarea_field( $output['login_help_text'] );
-
-		$output['dashboard_remove_custom_widget_ids'] = sanitize_textarea_field( $output['dashboard_remove_custom_widget_ids'] );
-		$output['admin_notice_hide_selectors']        = sanitize_textarea_field( $output['admin_notice_hide_selectors'] );
-
-		$output['perf_limit_revisions_count']    = isset( $input['perf_limit_revisions_count'] ) ? max( 0, (int) $input['perf_limit_revisions_count'] ) : (int) $defaults['perf_limit_revisions_count'];
-
-		return wp_parse_args( $output, $defaults );
+		$this->settings_cache = wp_parse_args( $output, $defaults );
+		return $this->settings_cache;
 	}
 
 	public function can_manage() {
