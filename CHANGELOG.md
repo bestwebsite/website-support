@@ -47,6 +47,7 @@ Release tags are formatted as `vX.Y.Z`.
 - Fixed release build failure caused by a misplaced `private` helper method in `BWS_Admin_Cleanup`, and improved top-level menu hiding by normalizing `toplevel_page_*` admin menu IDs into valid `remove_menu_page()` slugs.
 - Fixed “Hide Top-Level Menu Slugs” to support wp-admin DOM IDs like `menu-posts-{post_type}` by converting them to the correct WordPress menu slugs (e.g., `edit.php?post_type=team`), allowing CPT menus to be hidden reliably.
 - Fixed CPT menu label overrides to support `menu-posts-{post_type}` (and `edit.php?post_type=`) keys, enabling reliable renaming of theme/plugin CPT menus like “Kahlo Events”.
+- Fixed Update UI Cleanup so update indicators are reliably hidden (admin bar Updates, sidebar/plugin list badges, and plugin/theme update rows) by combining safe CSS output with wp-admin-only update count/transient suppression.
 
 ---
 
